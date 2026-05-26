@@ -69,6 +69,13 @@ export default function Home() {
     const lng = parseFloat(localStorage.getItem("regionLng"));
     return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : null;
   });
+  // "initial" | "geo" | "text"
+  const [inputMode, setInputMode] = useState(() => {
+    const label = localStorage.getItem("regionLabel");
+    if (label === "現在地周辺") return "geo";
+    if (label && label !== regionRiskData.tokyo.name) return "text";
+    return "initial";
+  });
 
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
 
@@ -77,21 +84,15 @@ export default function Home() {
     localStorage.setItem("regionLabel", regionLabel);
   }, [regionKey, regionLabel]);
 
-  // 初回起動時: 保存済み座標があればJ-SHIS取得を試みる
+  // 初回起動時: 現在地モードで保存済み座標があればJ-SHIS取得を試みる
   useEffect(() => {
+    const label = localStorage.getItem("regionLabel");
+    if (label !== "現在地周辺") return;
     const lat = parseFloat(localStorage.getItem("regionLat"));
     const lng = parseFloat(localStorage.getItem("regionLng"));
-    if (!isNaN(lat) && !isNaN(lng)) {
-      setRiskLoading(true);
-      fetchJshisRisk(lat, lng).then((d) => { setRiskData(d); setRiskLoading(false); });
-      return;
-    }
-    const key = localStorage.getItem("regionKey") || localStorage.getItem("selectedRegion") || "tokyo";
-    const coords = regionCoords[key];
-    if (coords && key !== "other") {
-      setRiskLoading(true);
-      fetchJshisRisk(coords.lat, coords.lng).then((d) => { setRiskData(d); setRiskLoading(false); });
-    }
+    if (isNaN(lat) || isNaN(lng)) return;
+    setRiskLoading(true);
+    fetchJshisRisk(lat, lng).then((d) => { setRiskData(d); setRiskLoading(false); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGeoRequest = () => {
@@ -106,6 +107,7 @@ export default function Home() {
         setRegionKey("other");
         setRegionLabel("現在地周辺");
         setGeoCoords({ lat: latitude, lng: longitude });
+        setInputMode("geo");
         setGeoState("idle");
         localStorage.setItem("regionLat", latitude.toString());
         localStorage.setItem("regionLng", longitude.toString());
@@ -122,21 +124,13 @@ export default function Home() {
     const text = inputText.trim();
     if (!text) return;
     setGeoCoords(null);
+    setInputMode("text");
+    setRiskData(null); // テキスト入力はデモ値のみ（緯度経度不明のためJ-SHIS未呼び出し）
     const key = matchRegionByKeyword(text);
     setRegionKey(key);
     setRegionLabel(text);
     setShowInput(false);
     setInputText("");
-    const coords = regionCoords[key];
-    if (coords) {
-      localStorage.setItem("regionLat", coords.lat.toString());
-      localStorage.setItem("regionLng", coords.lng.toString());
-      setRiskLoading(true);
-      setRiskData(null);
-      fetchJshisRisk(coords.lat, coords.lng).then((d) => { setRiskData(d); setRiskLoading(false); });
-    } else {
-      setRiskData(null);
-    }
   };
 
   const getRiskColor = (risk) => {
@@ -274,9 +268,13 @@ export default function Home() {
       <section className="card risk-card">
         <div className="card-header">
           <span className="card-icon">📊</span>
-          <h2 className="card-title">長期地震リスク（デモ）</h2>
+          <h2 className="card-title">長期地震リスク</h2>
         </div>
-        <p className="risk-subtitle">地域の長期地震リスク指標（30年スケール参考値）</p>
+        <p className="risk-subtitle">
+          {isJshis
+            ? "今後30年以内に震度6弱以上の揺れに見舞われる確率"
+            : "地域の長期地震リスク指標（30年スケール参考値）"}
+        </p>
         {!isJshis && !riskLoading && (
           <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
         )}
@@ -290,6 +288,16 @@ export default function Home() {
             <span className="datasource-badge datasource-badge--demo">デモ用サンプル</span>
           )}
         </div>
+        {inputMode === "geo" && riskData?.source === "demo" && !riskLoading && (
+          <p className="risk-api-fail-note">
+            J-SHISデータの取得に失敗したため、サンプル値を表示しています。
+          </p>
+        )}
+        {inputMode === "text" && !riskLoading && (
+          <p className="risk-text-input-note">
+            市区町村入力では現在デモ値を表示しています。正式版では住所から緯度経度へ変換してJ-SHISデータ取得に対応予定です。
+          </p>
+        )}
         <div className="risk-display">
           <div
             className="risk-circle"
@@ -342,6 +350,28 @@ export default function Home() {
             </>
           )}
         </p>
+
+        {isJshis && riskData.intensities && (
+          <div className="risk-intensities">
+            <p className="risk-intensities-title">長期地震リスク詳細（J-SHIS公的データ）</p>
+            <div className="risk-intensities-grid">
+              {[
+                { label: "震度5弱以上", val: riskData.intensities.i45 },
+                { label: "震度5強以上", val: riskData.intensities.i50 },
+                { label: "震度6弱以上", val: riskData.intensities.i55 },
+                { label: "震度6強以上", val: riskData.intensities.i60 },
+              ].filter(({ val }) => val != null).map(({ label, val }) => (
+                <div key={label} className="risk-intensity-item">
+                  <span className="risk-intensity-label">{label}</span>
+                  <span className="risk-intensity-value">{val}%</span>
+                </div>
+              ))}
+            </div>
+            {riskData.meshCode && (
+              <p className="risk-mesh-note">メッシュコード：{riskData.meshCode}</p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 揺れやすさ */}

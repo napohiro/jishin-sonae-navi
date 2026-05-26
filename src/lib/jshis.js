@@ -1,45 +1,58 @@
 // J-SHIS（地震ハザードステーション）API連携モジュール
 // API仕様: https://www.j-shis.bosai.go.jp/
-// 正式連携時は実際のAPIドキュメントに従ってエンドポイントを確認してください
+// このアプリは地震予知・地震予報を行うものではありません。
+// 取得するのは「長期地震リスク」の参考情報です。
 
-const API_ENDPOINT = "https://www.j-shis.bosai.go.jp/api/ppf/point";
-const TIMEOUT_MS = 8000;
+const API_BASE =
+  "https://www.j-shis.bosai.go.jp/map/api/pshm/Y2024/AVR/TTL_MTTL/meshinfo.geojson";
+const ATTRS = "T30_I45_PS,T30_I50_PS,T30_I55_PS,T30_I60_PS";
+const TIMEOUT_MS = 10000;
+
+// 小数値（例: 0.123456）を1桁の%値（例: 12.3）へ変換
+const toPercent = (v) => (v != null ? parseFloat((v * 100).toFixed(1)) : null);
 
 /**
  * 緯度・経度からJ-SHIS長期地震リスクを取得する。
- * 失敗時（CORS・タイムアウト・データ欠損）は { source: "demo" } を返す。
+ * 失敗時（CORS・タイムアウト・データ欠損・status≠Success）は { source: "demo" } を返す。
  *
- * 主な取得フィールド:
- *   T30_I45_PS  30年間で震度5弱以上となる確率
- *   T30_I50_PS  30年間で震度5強以上となる確率
- *   T30_I55_PS  30年間で震度6弱以上となる確率  ← リスク表示に使用
- *   T30_I60_PS  30年間で震度6強以上となる確率
+ * positionは「経度,緯度」の順序（J-SHIS API仕様）。
  *
- * @param {number} lat 緯度
- * @param {number} lng 経度
- * @returns {Promise<{source:"jshis"|"demo", risk30year?:number, intensities?:object}>}
+ * @param {number} lat 緯度（WGS84）
+ * @param {number} lng 経度（WGS84）
+ * @returns {Promise<{
+ *   source: "jshis" | "demo",
+ *   risk30year?: number,
+ *   intensities?: { i45: number|null, i50: number|null, i55: number|null, i60: number|null },
+ *   meshCode?: string|null
+ * }>}
  */
 export async function fetchJshisRisk(lat, lng) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const url = `${API_ENDPOINT}?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}`;
+    const pos = `${lng.toFixed(4)},${lat.toFixed(4)}`; // 経度,緯度の順
+    const url = `${API_BASE}?position=${pos}&epsg=4326&attr=${ATTRS}`;
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    const risk55 = data?.T30_I55_PS;
-    if (risk55 == null) throw new Error("Required fields missing in response");
+    if (data?.status !== "Success") throw new Error(`API status: ${data?.status}`);
+    const props = data.features?.[0]?.properties;
+    if (!props) throw new Error("No feature data in response");
+
+    const risk55 = props.T30_I55_PS;
+    if (risk55 == null) throw new Error("T30_I55_PS missing");
 
     return {
       source: "jshis",
-      risk30year: Math.round(risk55 * 100),
+      risk30year: Math.round(risk55 * 100), // メイン表示用（整数%）
       intensities: {
-        i45: data.T30_I45_PS != null ? Math.round(data.T30_I45_PS * 100) : null,
-        i50: data.T30_I50_PS != null ? Math.round(data.T30_I50_PS * 100) : null,
-        i55: Math.round(risk55 * 100),
-        i60: data.T30_I60_PS != null ? Math.round(data.T30_I60_PS * 100) : null,
+        i45: toPercent(props.T30_I45_PS),
+        i50: toPercent(props.T30_I50_PS),
+        i55: toPercent(props.T30_I55_PS),
+        i60: toPercent(props.T30_I60_PS),
       },
+      meshCode: data.features?.[0]?.id ?? null,
     };
   } catch {
     return { source: "demo" };

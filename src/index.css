@@ -417,6 +417,66 @@ button {
   border-color: var(--color-warning);
 }
 
+.risk-api-fail-note {
+  font-size: 0.775rem;
+  color: var(--color-warning);
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.risk-text-input-note {
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.risk-intensities {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.risk-intensities-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+  margin-bottom: 0.625rem;
+}
+
+.risk-intensities-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.375rem;
+}
+
+.risk-intensity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.625rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.risk-intensity-label {
+  color: var(--color-text-light);
+}
+
+.risk-intensity-value {
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-mesh-note {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 0.625rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .risk-display {
   display: flex;
   align-items: center;
