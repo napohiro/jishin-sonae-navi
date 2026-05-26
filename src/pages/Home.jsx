@@ -69,6 +69,7 @@ export default function Home() {
     const lng = parseFloat(localStorage.getItem("regionLng"));
     return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : null;
   });
+  const [showGroundScale, setShowGroundScale] = useState(false);
   // "initial" | "geo" | "text"
   const [inputMode, setInputMode] = useState(() => {
     const label = localStorage.getItem("regionLabel");
@@ -147,9 +148,18 @@ export default function Home() {
   };
 
   const getGroundLabel = (index) => {
-    if (index === 1) return { label: "比較的硬い", color: "#27ae60", icon: "🟢" };
-    if (index === 2) return { label: "中程度", color: "#f39c12", icon: "🟡" };
-    return { label: "軟弱地盤", color: "#e67e22", icon: "🟠" };
+    if (index === 1) return {
+      label: "比較的揺れにくい", color: "#27ae60", icon: "🟢",
+      desc: "地盤による揺れの増幅が比較的小さい地域です。引き続き、家具固定や避難場所の確認などの基本的な備えをお勧めします。",
+    };
+    if (index === 2) return {
+      label: "中程度", color: "#f39c12", icon: "🟡",
+      desc: "標準的な揺れやすさです。特別に揺れにくいわけでも揺れやすいわけでもありませんが、安全を意味するわけではありません。家具固定や避難場所の確認など基本的な備えが大切です。",
+    };
+    return {
+      label: "揺れやすい", color: "#e67e22", icon: "🟠",
+      desc: "地盤による揺れの増幅が大きくなりやすい地域です。家具の固定や建物の耐震性の確認など、備えをしっかり確認しておきましょう。",
+    };
   };
 
   const ground = getGroundLabel(region.groundIndex);
@@ -399,9 +409,34 @@ export default function Home() {
             <div className="ground-type">{region.groundType}</div>
           </div>
         </div>
+        <p className="ground-level-desc">{ground.desc}</p>
         <p className="ground-desc">
-          地盤の柔らかさは揺れの大きさに影響します。軟弱地盤ほど揺れが増幅されやすくなります。
+          「揺れやすさ」は、同じ地震の揺れが来たときに、地盤によってどれくらい揺れが大きくなりやすいかの目安です。地盤が柔らかい地域ほど、揺れが増幅されやすくなります。
         </p>
+        <button
+          className="ground-scale-toggle"
+          onClick={() => setShowGroundScale((v) => !v)}
+          aria-expanded={showGroundScale}
+        >
+          {showGroundScale ? "▲ 目安を閉じる" : "▼ 5段階の目安を見る"}
+        </button>
+        {showGroundScale && (
+          <div className="ground-scale">
+            {[
+              { icon: "🟢", label: "揺れにくい",     desc: "地盤による揺れの増幅が比較的小さい" },
+              { icon: "🟡", label: "やや揺れにくい", desc: "平均より少し揺れにくい" },
+              { icon: "🟡", label: "中程度",          desc: "標準的な揺れやすさ" },
+              { icon: "🟠", label: "やや揺れやすい", desc: "揺れがやや大きくなりやすい" },
+              { icon: "🔴", label: "揺れやすい",      desc: "地盤による揺れの増幅が大きくなりやすい" },
+            ].map(({ icon, label, desc }) => (
+              <div key={label} className="ground-scale-item">
+                <span className="ground-scale-icon">{icon}</span>
+                <span className="ground-scale-label">{label}</span>
+                <span className="ground-scale-desc">{desc}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 近くの避難所 */}

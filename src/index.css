@@ -579,10 +579,63 @@ button {
   margin-top: 0.2rem;
 }
 
+.ground-level-desc {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+  background: var(--color-bg-alt, #f5f7fa);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
 .ground-desc {
   font-size: 0.825rem;
   color: var(--color-text-light);
   line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.ground-scale-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.ground-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.ground-scale-item {
+  display: grid;
+  grid-template-columns: 1.4rem 7rem 1fr;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.ground-scale-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.ground-scale-label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ground-scale-desc {
+  color: var(--color-text-light);
 }
 
 /* ===== SHELTER CARD ===== */
