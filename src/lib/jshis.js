@@ -1,5 +1,5 @@
 // J-SHIS（地震ハザードステーション）API連携モジュール
-// API仕様: https://www.j-shis.bosai.go.jp/
+// Vercel Serverless Function (/api/jshis) 経由でJ-SHIS APIを呼び出す（CORS回避）
 // このアプリは地震予知・地震予報を行うものではありません。
 // 取得するのは「長期地震リスク」の参考情報です。
 
@@ -10,13 +10,13 @@ const toPercent = (v) => (v != null ? parseFloat((v * 100).toFixed(1)) : null);
 
 /**
  * 緯度・経度からJ-SHIS長期地震リスクを取得する。
- * Vercel Serverless Function (/api/jshis) 経由でJ-SHIS APIを呼び出す（CORS回避）。
- * 失敗時は { source: "demo" } を返す。
+ * 失敗時は { source: "demo", failReason: string } を返す。
  *
  * @param {number} lat 緯度（WGS84）
  * @param {number} lng 経度（WGS84）
  * @returns {Promise<{
  *   source: "jshis" | "demo",
+ *   failReason?: string,
  *   risk30year?: number,
  *   intensities?: { i45: number|null, i50: number|null, i55: number|null, i60: number|null },
  *   meshCode?: string|null
@@ -27,11 +27,19 @@ export async function fetchJshisRisk(lat, lng) {
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const url = `/api/jshis?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}`;
+    console.log("[jshis client] Calling proxy:", url);
+
     const res = await fetch(url, { signal: ctrl.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message ?? `HTTP ${res.status}`);
+    }
     const data = await res.json();
 
-    if (data?.status !== "success") throw new Error(`proxy status: ${data?.status}`);
+    if (data?.status !== "success") {
+      throw new Error(data?.message ?? `proxy status: ${data?.status}`);
+    }
+
     const d = data.data;
     if (!d || d.t30_i55 == null) throw new Error("t30_i55 missing");
 
@@ -46,8 +54,10 @@ export async function fetchJshisRisk(lat, lng) {
       },
       meshCode: data.meshCode ?? null,
     };
-  } catch {
-    return { source: "demo" };
+  } catch (err) {
+    const failReason = err?.name === "AbortError" ? "timeout" : (err?.message ?? String(err));
+    console.warn("[jshis client] Failed:", failReason);
+    return { source: "demo", failReason };
   } finally {
     clearTimeout(timer);
   }

@@ -289,9 +289,14 @@ export default function Home() {
           )}
         </div>
         {inputMode === "geo" && riskData?.source === "demo" && !riskLoading && (
-          <p className="risk-api-fail-note">
-            J-SHISデータの取得に失敗したため、サンプル値を表示しています。
-          </p>
+          <>
+            <p className="risk-api-fail-note">
+              J-SHISデータの取得に失敗したため、サンプル値を表示しています。
+            </p>
+            {riskData?.failReason && (
+              <p className="risk-api-fail-reason">取得失敗理由：{riskData.failReason}</p>
+            )}
+          </>
         )}
         {inputMode === "text" && !riskLoading && (
           <p className="risk-text-input-note">

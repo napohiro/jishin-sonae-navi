@@ -420,8 +420,14 @@ button {
 .risk-api-fail-note {
   font-size: 0.775rem;
   color: var(--color-warning);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.25rem;
   line-height: 1.5;
+}
+.risk-api-fail-reason {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+  word-break: break-all;
 }
 
 .risk-text-input-note {
