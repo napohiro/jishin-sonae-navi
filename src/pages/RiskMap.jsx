@@ -142,7 +142,7 @@ export default function RiskMap() {
           <h2 className="card-title">近年の主な地震記録</h2>
         </div>
         <p className="earthquake-list-note">
-          過去の地震記録です。今後の地震予測ではありません。
+          ⚠ サンプルデータです。過去の地震を参考として掲載しています。今後の地震予測ではありません。
         </p>
         <div className="earthquake-list">
           {recentEarthquakes.map((eq) => (
@@ -168,7 +168,7 @@ export default function RiskMap() {
           ))}
         </div>
         <p className="earthquake-source">
-          出典：気象庁 地震情報（参考データ）
+          参考：正式版では気象庁等の公的データ連携を予定（現在はサンプルデータ）
         </p>
       </section>
 

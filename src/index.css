@@ -367,6 +367,13 @@ button {
 .risk-subtitle {
   font-size: 0.875rem;
   color: var(--color-text-light);
+  margin-bottom: 0.5rem;
+}
+
+.risk-demo-note {
+  font-size: 0.775rem;
+  color: var(--color-warning);
+  font-weight: 600;
   margin-bottom: 1.25rem;
 }
 

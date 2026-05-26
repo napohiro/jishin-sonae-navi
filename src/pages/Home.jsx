@@ -227,6 +227,7 @@ export default function Home() {
           <h2 className="card-title">長期地震リスク（デモ）</h2>
         </div>
         <p className="risk-subtitle">今後30年以内に震度6弱以上の揺れが起きる確率</p>
+        <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
         <div className="risk-display">
           <div
             className="risk-circle"
@@ -252,16 +253,16 @@ export default function Home() {
           />
         </div>
         <p className="risk-source">
-          出典：
+          参考：正式版では
           <a
             href="https://www.j-shis.bosai.go.jp/"
             target="_blank"
             rel="noopener noreferrer"
             className="source-link"
           >
-            J-SHIS 地震ハザードステーション（防災科学技術研究所）
+            J-SHIS 地震ハザードステーション
           </a>
-          のデータに基づくデモ値
+          等の公的データ連携を予定（現在はサンプル値）
         </p>
       </section>
 
