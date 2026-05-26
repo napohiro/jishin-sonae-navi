@@ -3,7 +3,7 @@
 
 const JSHIS_BASE =
   "https://www.j-shis.bosai.go.jp/map/api/pshm/Y2024/AVR/TTL_MTTL/meshinfo.geojson";
-const ATTRS = "T30_I45_PS,T30_I50_PS,T30_I55_PS,T30_I60_PS";
+const ATTRS = "T30_I45_PS,T30_I50_PS,T30_I55_PS";
 const TIMEOUT_MS = 10000;
 
 export default async function handler(req, res) {
@@ -21,6 +21,12 @@ export default async function handler(req, res) {
   if (isNaN(latNum) || isNaN(lonNum)) {
     console.error("[jshis] lat/lon is not a number: lat=%s lon=%s", lat, lon);
     return res.status(400).json({ status: "error", message: "lat/lon が数値ではありません" });
+  }
+
+  // 日本国内範囲外はAPIを呼ばずにフォールバック
+  if (latNum < 20 || latNum > 46 || lonNum < 122 || lonNum > 154) {
+    console.warn("[jshis] Out of Japan bounds: lat=%s lon=%s", latNum, lonNum);
+    return res.status(200).json({ status: "error", message: "日本国内の座標ではありません" });
   }
 
   // J-SHIS仕様: position は「経度,緯度」の順
@@ -87,7 +93,6 @@ export default async function handler(req, res) {
         t30_i45: props.T30_I45_PS,
         t30_i50: props.T30_I50_PS,
         t30_i55: props.T30_I55_PS,
-        t30_i60: props.T30_I60_PS,
       },
     });
   } catch (err) {

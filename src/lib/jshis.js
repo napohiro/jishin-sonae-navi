@@ -50,7 +50,6 @@ export async function fetchJshisRisk(lat, lng) {
         i45: toPercent(d.t30_i45),
         i50: toPercent(d.t30_i50),
         i55: toPercent(d.t30_i55),
-        i60: toPercent(d.t30_i60),
       },
       meshCode: data.meshCode ?? null,
     };

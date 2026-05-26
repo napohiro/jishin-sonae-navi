@@ -364,7 +364,6 @@ export default function Home() {
                 { label: "震度5弱以上", val: riskData.intensities.i45 },
                 { label: "震度5強以上", val: riskData.intensities.i50 },
                 { label: "震度6弱以上", val: riskData.intensities.i55 },
-                { label: "震度6強以上", val: riskData.intensities.i60 },
               ].filter(({ val }) => val != null).map(({ label, val }) => (
                 <div key={label} className="risk-intensity-item">
                   <span className="risk-intensity-label">{label}</span>
