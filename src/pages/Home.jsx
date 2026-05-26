@@ -90,6 +90,10 @@ export default function Home() {
   });
   const [showGroundScale, setShowGroundScale] = useState(false);
   const [groundData, setGroundData] = useState(null);
+  const [familyMemo, setFamilyMemo] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("familyMemo") || "{}"); }
+    catch { return {}; }
+  });
   // "initial" | "geo" | "text"
   const [inputMode, setInputMode] = useState(() => {
     const label = localStorage.getItem("regionLabel");
@@ -196,8 +200,39 @@ export default function Home() {
     }
   })();
 
-  const totalItems = 13;
+  const totalItems = 17;
   const prepPercent = Math.round((checklistCount / totalItems) * 100);
+
+  const updateMemo = (key, value) => {
+    setFamilyMemo((prev) => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem("familyMemo", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const getRiskProposal = (risk) => {
+    if (risk < 3)  return "長期地震リスクは比較的低めです。ただし、地震が起きないという意味ではありません。基本の備えを整えておきましょう。";
+    if (risk < 10) return "長期地震リスクはやや意識しておきたい水準です。家具固定・飲料水・非常食・停電対策を確認しましょう。";
+    if (risk < 26) return "長期地震リスクは中程度です。家庭内の安全対策と避難場所の確認を優先しましょう。";
+    return "長期地震リスクは相対的に高めです。家具固定、家族の集合場所、停電対策、非常用品の見直しを早めに行いましょう。";
+  };
+
+  const getGroundProposal = (level) => {
+    if (level >= 4) return "地盤によって揺れが大きくなりやすい可能性があります。寝室やリビングの家具固定を優先しましょう。";
+    if (level === 3) return "標準的な揺れやすさですが、家具固定や避難経路の確認は必要です。";
+    return null;
+  };
+
+  const getPrepProposal = (percent) => {
+    if (percent <= 30) return "まずは飲料水・非常食・モバイルバッテリーの3つから始めましょう。";
+    if (percent <= 70) return "基本の備えは進んでいます。家具固定や家族の連絡手段も確認しましょう。";
+    return "備えはかなり進んでいます。定期的に期限切れや電池残量を確認しましょう。";
+  };
+
+  const riskProposal   = getRiskProposal(displayRisk30);
+  const groundProposal = getGroundProposal(currentGroundLevel);
+  const prepProposal   = getPrepProposal(prepPercent);
 
   return (
     <div className="page">
@@ -414,6 +449,33 @@ export default function Home() {
         )}
       </section>
 
+      {/* あなたへの備え提案 */}
+      <section className="card proposal-card">
+        <div className="card-header">
+          <span className="card-icon">💡</span>
+          <h2 className="card-title">あなたへの備え提案</h2>
+        </div>
+        <div className="proposal-items">
+          <div className="proposal-item">
+            <span className="proposal-icon">📊</span>
+            <p className="proposal-text">{riskProposal}</p>
+          </div>
+          {groundProposal && (
+            <div className="proposal-item">
+              <span className="proposal-icon">🌍</span>
+              <p className="proposal-text">{groundProposal}</p>
+            </div>
+          )}
+          <div className="proposal-item">
+            <span className="proposal-icon">🎒</span>
+            <p className="proposal-text">{prepProposal}</p>
+          </div>
+        </div>
+        <Link to="/prep-check" className="btn btn-primary proposal-btn">
+          備えチェックリストを確認する →
+        </Link>
+      </section>
+
       {/* 揺れやすさ */}
       <section className="card ground-card">
         <div className="card-header">
@@ -524,6 +586,79 @@ export default function Home() {
         <Link to="/prep-check" className="btn btn-primary">
           備えチェックリストを確認する →
         </Link>
+      </section>
+
+      {/* キャンプ用品の防災転用 */}
+      <section className="card camp-card">
+        <div className="card-header">
+          <span className="card-icon">⛺</span>
+          <h2 className="card-title">キャンプ用品は防災にも使えます</h2>
+        </div>
+        <p className="camp-desc">
+          ランタン・寝袋・ウォータータンク・カセットコンロ・ポータブル電源などは、停電や避難時にも役立ちます。普段使っている道具を、防災目線でも確認しておきましょう。
+        </p>
+        <div className="camp-items">
+          {[
+            { icon: "🏮", label: "LEDランタン" },
+            { icon: "🛌", label: "寝袋" },
+            { icon: "🍳", label: "カセットコンロ" },
+            { icon: "🪣", label: "ウォータータンク" },
+            { icon: "⚡", label: "ポータブル電源" },
+          ].map(({ icon, label }) => (
+            <div key={label} className="camp-item">
+              <span className="camp-item-icon">{icon}</span>
+              <span className="camp-item-label">{label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 家族の防災メモ */}
+      <section className="card memo-card">
+        <div className="card-header">
+          <span className="card-icon">📝</span>
+          <h2 className="card-title">家族の防災メモ</h2>
+        </div>
+        <p className="memo-privacy-note">
+          🔒 このメモは端末内にのみ保存されます。共有端末では個人情報を書きすぎないようご注意ください。
+        </p>
+        {[
+          { key: "meetingPlace",      label: "家族の集合場所",            placeholder: "例：○○公園・○○小学校" },
+          { key: "emergencyContact",  label: "緊急連絡先メモ",            placeholder: "例：母 090-XXXX-XXXX" },
+          { key: "parentsEvacuation", label: "実家・親の避難場所",         placeholder: "例：△△市△△小学校" },
+          { key: "specialNotes",      label: "ペット・薬・持病などのメモ", placeholder: "例：犬あり / 血圧の薬" },
+        ].map(({ key, label, placeholder }) => (
+          <div key={key} className="memo-field">
+            <label className="memo-label">{label}</label>
+            <textarea
+              className="memo-input"
+              rows={2}
+              placeholder={placeholder}
+              value={familyMemo[key] ?? ""}
+              onChange={(e) => updateMemo(key, e.target.value)}
+            />
+          </div>
+        ))}
+      </section>
+
+      {/* 公式情報リンク */}
+      <section className="card link-card">
+        <div className="card-header">
+          <span className="card-icon">🔗</span>
+          <h2 className="card-title">公式情報リンク</h2>
+        </div>
+        <div className="external-links">
+          {[
+            { icon: "🗾", label: "J-SHIS 地震ハザードステーション",  url: "https://www.j-shis.bosai.go.jp/" },
+            { icon: "🌤️", label: "気象庁 地震情報",                  url: "https://www.jma.go.jp/jma/index.html" },
+            { icon: "🗺️", label: "ハザードマップポータルサイト",      url: "https://disaportal.gsi.go.jp/" },
+            { icon: "🏛️", label: "内閣府 防災情報のページ",           url: "https://www.bousai.go.jp/" },
+          ].map(({ icon, label, url }) => (
+            <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="external-link-btn">
+              {icon} {label}
+            </a>
+          ))}
+        </div>
       </section>
 
       {/* フッター免責 */}
