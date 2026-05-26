@@ -226,7 +226,7 @@ export default function Home() {
           <span className="card-icon">📊</span>
           <h2 className="card-title">長期地震リスク（デモ）</h2>
         </div>
-        <p className="risk-subtitle">今後30年以内に震度6弱以上の揺れが起きる確率</p>
+        <p className="risk-subtitle">地域の長期地震リスク指標（30年スケール参考値）</p>
         <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
         <div className="risk-display">
           <div
@@ -346,8 +346,7 @@ export default function Home() {
             🛡️ <strong>地震そなえナビ</strong>は地震予知・地震予報を行うものではありません。
           </p>
           <p>
-            公的機関等のデータをもとに、地域リスクの把握と日頃の備えを支援するアプリです。
-            表示されるリスク値はデモデータであり、実際の確率は J-SHIS 等の公式サービスでご確認ください。
+            現在はデモ用サンプルデータを表示しています。正式版ではJ-SHIS等の公的情報との連携を予定しています。実際の地域リスクは公式サービスでご確認ください。
           </p>
           <p>個人情報は収集していません。データは端末内（localStorage）にのみ保存されます。</p>
         </div>

@@ -127,7 +127,7 @@ export default function RiskMap() {
         </div>
 
         <p className="map-note">
-          ※ このマップはデモ用の模式図です。実際の地盤データは
+          このマップはデモ表示です。正式版では公的データをもとに地域リスクを表示予定です。実際の地盤データは
           <a href="https://www.j-shis.bosai.go.jp/" target="_blank" rel="noopener noreferrer" className="source-link">
             J-SHIS
           </a>
