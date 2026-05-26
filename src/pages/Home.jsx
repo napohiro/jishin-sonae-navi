@@ -275,7 +275,7 @@ export default function Home() {
             ? "今後30年以内に震度6弱以上の揺れに見舞われる確率"
             : "地域の長期地震リスク指標（30年スケール参考値）"}
         </p>
-        {!isJshis && !riskLoading && (
+        {!isJshis && !riskLoading && inputMode !== "initial" && (
           <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
         )}
         <div className="risk-datasource">
@@ -308,7 +308,7 @@ export default function Home() {
         )}
         {inputMode === "text" && !riskLoading && (
           <p className="risk-text-input-note">
-            市区町村入力では現在デモ値を表示しています。正式版では住所から緯度経度へ変換してJ-SHISデータ取得に対応予定です。
+            市区町村名入力時は参考サンプル値を表示しています。現在地取得時はJ-SHIS公的データを使用します。
           </p>
         )}
         <div className="risk-display">
@@ -464,11 +464,14 @@ export default function Home() {
             🛡️ <strong>地震そなえナビ</strong>は地震予知・地震予報を行うものではありません。
           </p>
           <p>
-            現在はデモ用サンプルデータを表示しています。正式版ではJ-SHIS等の公的情報との連携を予定しています。実際の地域リスクは公式サービスでご確認ください。
+            現在地取得時の長期地震リスクは、J-SHIS等の公的情報を参考に表示しています。一部の表示や避難所情報はデモ用サンプルを含みます。
+          </p>
+          <p>
+            実際の防災判断は、自治体・気象庁・J-SHIS等の公式情報をご確認ください。
           </p>
           <p>個人情報は収集していません。データは端末内（localStorage）にのみ保存されます。</p>
         </div>
-        <p className="footer-copy">© 2025 地震そなえナビ（デモアプリ）</p>
+        <p className="footer-copy">© 2025 地震そなえナビ</p>
       </footer>
     </div>
   );
