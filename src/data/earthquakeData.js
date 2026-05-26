@@ -1,60 +1,74 @@
 // サンプルデータ: 実際のアプリでは J-SHIS API 等から取得
 export const regionRiskData = {
   tokyo: {
-    name: "東京都（23区中心部）",
+    name: "東京都",
     risk30year: 85,
     groundType: "軟弱地盤",
     groundIndex: 2, // 1:硬, 2:中, 3:軟弱
     nearestShelter: "新宿区立新宿小学校（約350m）",
   },
   osaka: {
-    name: "大阪市（中心部）",
+    name: "大阪府大阪市",
     risk30year: 60,
     groundType: "中程度",
     groundIndex: 2,
     nearestShelter: "大阪市立南小学校（約420m）",
   },
   nagoya: {
-    name: "名古屋市（中心部）",
+    name: "愛知県名古屋市",
     risk30year: 46,
     groundType: "中程度",
     groundIndex: 2,
     nearestShelter: "名古屋市立栄小学校（約510m）",
   },
   sapporo: {
-    name: "札幌市（中心部）",
+    name: "北海道札幌市",
     risk30year: 3,
     groundType: "比較的硬い",
     groundIndex: 1,
     nearestShelter: "札幌市立中央小学校（約280m）",
   },
   fukuoka: {
-    name: "福岡市（中心部）",
+    name: "福岡県福岡市",
     risk30year: 8,
     groundType: "比較的硬い",
     groundIndex: 1,
     nearestShelter: "福岡市立博多小学校（約390m）",
   },
   hiroshima: {
-    name: "広島市（中心部）",
+    name: "広島県広島市",
     risk30year: 10,
     groundType: "中程度",
     groundIndex: 2,
     nearestShelter: "広島市立本川小学校（約450m）",
   },
   sendai: {
-    name: "仙台市（中心部）",
+    name: "宮城県仙台市",
     risk30year: 14,
     groundType: "中程度",
     groundIndex: 2,
     nearestShelter: "仙台市立片平丁小学校（約320m）",
   },
   shizuoka: {
-    name: "静岡市（中心部）",
+    name: "静岡県静岡市",
     risk30year: 70,
     groundType: "軟弱地盤",
     groundIndex: 3,
     nearestShelter: "静岡市立安東小学校（約400m）",
+  },
+  kobe: {
+    name: "兵庫県神戸市",
+    risk30year: 47,
+    groundType: "中程度",
+    groundIndex: 2,
+    nearestShelter: "神戸市立湊小学校（約380m）",
+  },
+  other: {
+    name: "その他の地域（デモ）",
+    risk30year: 26,
+    groundType: "中程度",
+    groundIndex: 2,
+    nearestShelter: "お近くの避難所は自治体のハザードマップでご確認ください",
   },
 };
 

@@ -3,16 +3,99 @@ import { Link } from "react-router-dom";
 import { regionRiskData } from "../data/earthquakeData";
 import DisclaimerBanner from "../components/DisclaimerBanner";
 
-export default function Home() {
-  const [selectedRegion, setSelectedRegion] = useState(() => {
-    return localStorage.getItem("selectedRegion") || "tokyo";
-  });
+const regionKeywords = {
+  tokyo:     ["東京", "23区", "千代田", "新宿", "渋谷", "港区", "品川", "世田谷", "練馬", "豊島", "杉並"],
+  osaka:     ["大阪", "梅田", "難波", "堺"],
+  nagoya:    ["名古屋", "愛知", "豊田", "豊橋"],
+  sapporo:   ["札幌", "北海道", "函館", "旭川"],
+  fukuoka:   ["福岡", "博多", "北九州"],
+  hiroshima: ["広島", "呉", "福山"],
+  sendai:    ["仙台", "宮城"],
+  shizuoka:  ["静岡", "浜松", "沼津"],
+  kobe:      ["神戸", "兵庫", "加古川", "姫路", "西宮", "尼崎", "明石", "宝塚"],
+};
 
-  const region = regionRiskData[selectedRegion];
+const regionCoords = {
+  tokyo:     { lat: 35.69, lng: 139.69 },
+  osaka:     { lat: 34.69, lng: 135.50 },
+  nagoya:    { lat: 35.18, lng: 136.91 },
+  sapporo:   { lat: 43.06, lng: 141.35 },
+  fukuoka:   { lat: 33.59, lng: 130.40 },
+  hiroshima: { lat: 34.38, lng: 132.45 },
+  sendai:    { lat: 38.27, lng: 140.87 },
+  shizuoka:  { lat: 34.98, lng: 138.38 },
+  kobe:      { lat: 34.69, lng: 135.19 },
+};
+
+function matchRegionByKeyword(text) {
+  for (const [key, kws] of Object.entries(regionKeywords)) {
+    if (kws.some((kw) => text.includes(kw))) return key;
+  }
+  return "other";
+}
+
+function findClosestRegion(lat, lng) {
+  let minDist = Infinity;
+  let closest = "other";
+  for (const [key, c] of Object.entries(regionCoords)) {
+    const dist = Math.hypot(lat - c.lat, lng - c.lng);
+    if (dist < minDist) { minDist = dist; closest = key; }
+  }
+  return closest;
+}
+
+export default function Home() {
+  const [regionKey, setRegionKey] = useState(() => {
+    return localStorage.getItem("regionKey")
+      || localStorage.getItem("selectedRegion")
+      || "tokyo";
+  });
+  const [regionLabel, setRegionLabel] = useState(() => {
+    const saved = localStorage.getItem("regionLabel");
+    if (saved) return saved;
+    const key = localStorage.getItem("regionKey")
+      || localStorage.getItem("selectedRegion")
+      || "tokyo";
+    return regionRiskData[key]?.name ?? regionRiskData.tokyo.name;
+  });
+  const [geoState, setGeoState] = useState("idle"); // 'idle' | 'confirm' | 'loading' | 'error'
+  const [showInput, setShowInput] = useState(false);
+  const [inputText, setInputText] = useState("");
+
+  const region = regionRiskData[regionKey] ?? regionRiskData.other;
 
   useEffect(() => {
-    localStorage.setItem("selectedRegion", selectedRegion);
-  }, [selectedRegion]);
+    localStorage.setItem("regionKey", regionKey);
+    localStorage.setItem("regionLabel", regionLabel);
+  }, [regionKey, regionLabel]);
+
+  const handleGeoRequest = () => {
+    if (!navigator.geolocation) { setGeoState("error"); return; }
+    setGeoState("confirm");
+  };
+
+  const handleGeoConfirm = () => {
+    setGeoState("loading");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        const key = findClosestRegion(latitude, longitude);
+        setRegionKey(key);
+        setRegionLabel(regionRiskData[key].name + "（現在地周辺）");
+        setGeoState("idle");
+      },
+      () => setGeoState("error"),
+      { timeout: 10000 }
+    );
+  };
+
+  const handleSearch = () => {
+    const text = inputText.trim();
+    if (!text) return;
+    setRegionKey(matchRegionByKeyword(text));
+    setRegionLabel(text);
+    setShowInput(false);
+    setInputText("");
+  };
 
   const getRiskColor = (risk) => {
     if (risk >= 70) return "#e67e22";
@@ -58,17 +141,82 @@ export default function Home() {
           <span className="card-icon">📍</span>
           <h2 className="card-title">地域を選択</h2>
         </div>
-        <select
-          className="region-select"
-          value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
-        >
-          {Object.entries(regionRiskData).map(([key, val]) => (
-            <option key={key} value={key}>
-              {val.name}
-            </option>
-          ))}
-        </select>
+
+        <div className="region-current">
+          <span className="region-current-label">選択地域：</span>
+          <strong className="region-current-name">{regionLabel}</strong>
+        </div>
+
+        {geoState === "idle" && !showInput && (
+          <div className="region-actions">
+            <button className="btn btn-geo" onClick={handleGeoRequest}>
+              📡 現在地から調べる
+            </button>
+            <button className="btn btn-outline" onClick={() => setShowInput(true)}>
+              🔍 市区町村を入力
+            </button>
+          </div>
+        )}
+
+        {geoState === "confirm" && (
+          <div className="geo-consent">
+            <p className="geo-consent-text">
+              現在地情報は端末内で地域リスク表示にのみ使用します。個人を特定する目的では使用しません。
+            </p>
+            <div className="region-actions">
+              <button className="btn btn-primary" onClick={handleGeoConfirm}>
+                現在地を取得する
+              </button>
+              <button className="btn btn-ghost" onClick={() => setGeoState("idle")}>
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
+
+        {geoState === "loading" && (
+          <p className="geo-status-text">📡 現在地を取得中…</p>
+        )}
+
+        {geoState === "error" && (
+          <div className="geo-consent">
+            <p className="geo-consent-text">現在地の取得に失敗しました。市区町村を入力して調べることができます。</p>
+            <div className="region-actions">
+              <button
+                className="btn btn-outline"
+                onClick={() => { setGeoState("idle"); setShowInput(true); }}
+              >
+                市区町村を入力して調べる
+              </button>
+              <button className="btn btn-ghost" onClick={() => setGeoState("idle")}>
+                閉じる
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showInput && geoState === "idle" && (
+          <div className="region-input-wrap">
+            <input
+              className="region-input"
+              type="text"
+              placeholder="例：兵庫県加古川市"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              autoFocus
+            />
+            <div className="region-actions">
+              <button className="btn btn-primary" onClick={handleSearch}>
+                調べる
+              </button>
+              <button className="btn btn-ghost" onClick={() => { setShowInput(false); setInputText(""); }}>
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
+
         <p className="region-note">※ デモ用データです。正確なリスクは J-SHIS でご確認ください。</p>
       </section>
 
@@ -91,7 +239,7 @@ export default function Home() {
             <div className="risk-level" style={{ color: riskColor }}>
               リスク：{getRiskLabel(region.risk30year)}
             </div>
-            <div className="risk-region">{region.name}</div>
+            <div className="risk-region">{regionLabel}</div>
           </div>
         </div>
         <div className="risk-bar-wrap">
