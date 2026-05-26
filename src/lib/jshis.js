@@ -3,9 +3,6 @@
 // このアプリは地震予知・地震予報を行うものではありません。
 // 取得するのは「長期地震リスク」の参考情報です。
 
-const API_BASE =
-  "https://www.j-shis.bosai.go.jp/map/api/pshm/Y2024/AVR/TTL_MTTL/meshinfo.geojson";
-const ATTRS = "T30_I45_PS,T30_I50_PS,T30_I55_PS,T30_I60_PS";
 const TIMEOUT_MS = 10000;
 
 // 小数値（例: 0.123456）を1桁の%値（例: 12.3）へ変換
@@ -13,9 +10,8 @@ const toPercent = (v) => (v != null ? parseFloat((v * 100).toFixed(1)) : null);
 
 /**
  * 緯度・経度からJ-SHIS長期地震リスクを取得する。
- * 失敗時（CORS・タイムアウト・データ欠損・status≠Success）は { source: "demo" } を返す。
- *
- * positionは「経度,緯度」の順序（J-SHIS API仕様）。
+ * Vercel Serverless Function (/api/jshis) 経由でJ-SHIS APIを呼び出す（CORS回避）。
+ * 失敗時は { source: "demo" } を返す。
  *
  * @param {number} lat 緯度（WGS84）
  * @param {number} lng 経度（WGS84）
@@ -30,29 +26,25 @@ export async function fetchJshisRisk(lat, lng) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const pos = `${lng.toFixed(4)},${lat.toFixed(4)}`; // 経度,緯度の順
-    const url = `${API_BASE}?position=${pos}&epsg=4326&attr=${ATTRS}`;
+    const url = `/api/jshis?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}`;
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    if (data?.status !== "Success") throw new Error(`API status: ${data?.status}`);
-    const props = data.features?.[0]?.properties;
-    if (!props) throw new Error("No feature data in response");
-
-    const risk55 = props.T30_I55_PS;
-    if (risk55 == null) throw new Error("T30_I55_PS missing");
+    if (data?.status !== "success") throw new Error(`proxy status: ${data?.status}`);
+    const d = data.data;
+    if (!d || d.t30_i55 == null) throw new Error("t30_i55 missing");
 
     return {
       source: "jshis",
-      risk30year: Math.round(risk55 * 100), // メイン表示用（整数%）
+      risk30year: Math.round(d.t30_i55 * 100), // メイン表示用（整数%）
       intensities: {
-        i45: toPercent(props.T30_I45_PS),
-        i50: toPercent(props.T30_I50_PS),
-        i55: toPercent(props.T30_I55_PS),
-        i60: toPercent(props.T30_I60_PS),
+        i45: toPercent(d.t30_i45),
+        i50: toPercent(d.t30_i50),
+        i55: toPercent(d.t30_i55),
+        i60: toPercent(d.t30_i60),
       },
-      meshCode: data.features?.[0]?.id ?? null,
+      meshCode: data.meshCode ?? null,
     };
   } catch {
     return { source: "demo" };
