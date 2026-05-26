@@ -520,6 +520,14 @@ button {
   flex: 1;
 }
 
+.risk-level-label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  margin-bottom: 0.1rem;
+  letter-spacing: 0.02em;
+}
+
 .risk-level {
   font-size: 1.1rem;
   font-weight: 700;
@@ -744,6 +752,20 @@ button {
   font-size: 0.875rem;
   color: var(--color-text);
   line-height: 1.5;
+}
+
+.memo-privacy-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.memo-expand-btn {
+  margin-top: 0.25rem;
+}
+
+.memo-collapse-btn {
+  margin-top: 0.5rem;
 }
 
 /* ===== MEMO SAVED ===== */

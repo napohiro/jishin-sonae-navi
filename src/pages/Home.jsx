@@ -104,6 +104,7 @@ export default function Home() {
 
   // 新規状態
   const [memoSaved, setMemoSaved] = useState(false);
+  const [showMemo, setShowMemo] = useState(false);
   const [showCampDetail, setShowCampDetail] = useState(false);
   const [showLinks, setShowLinks] = useState(false);
   const [showFooterDetail, setShowFooterDetail] = useState(false);
@@ -396,9 +397,15 @@ export default function Home() {
             <span className="summary-value">{regionLabel}</span>
           </div>
           <div className="summary-item">
-            <span className="summary-label">長期地震リスク</span>
+            <span className="summary-label">震度6弱以上 30年</span>
             <span className="summary-value" style={{ color: riskLoading ? undefined : riskColor }}>
-              {riskLoading ? "取得中…" : `${displayRisk30}%（${getRiskLabel(displayRisk30)}）`}
+              {riskLoading ? "取得中…" : `${displayRisk30}%`}
+            </span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">リスク判定</span>
+            <span className="summary-value" style={{ color: riskLoading ? undefined : riskColor }}>
+              {riskLoading ? "—" : getRiskLabel(displayRisk30)}
             </span>
           </div>
           {!riskLoading && getRiskLabel(displayRisk30) === "比較的低い" && (
@@ -407,10 +414,10 @@ export default function Home() {
             </div>
           )}
           <div className="summary-item">
-            <span className="summary-label">データ種別</span>
+            <span className="summary-label">データ</span>
             <span className="summary-value">
               {riskLoading ? "—" : isJshis ? (
-                <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+                <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS</span>
               ) : (
                 <span className="datasource-badge datasource-badge--demo">サンプル</span>
               )}
@@ -428,7 +435,7 @@ export default function Home() {
               className="summary-value"
               style={{ color: prepPercent >= 70 ? "#27ae60" : prepPercent >= 40 ? "#f39c12" : "#e67e22" }}
             >
-              {prepPercent}%（{checklistCount}/{totalItems}項目）
+              {checklistCount}/{totalItems}項目
             </span>
           </div>
         </div>
@@ -507,8 +514,9 @@ export default function Home() {
             <span className="risk-unit">%</span>
           </div>
           <div className="risk-info">
+            <div className="risk-level-label">リスク判定</div>
             <div className="risk-level" style={{ color: riskColor }}>
-              リスク：{getRiskLabel(displayRisk30)}
+              {getRiskLabel(displayRisk30)}
             </div>
             <div className="risk-region">{regionLabel}</div>
           </div>
@@ -765,27 +773,47 @@ export default function Home() {
           <h2 className="card-title">家族の防災メモ</h2>
         </div>
         <p className="memo-privacy-note">
-          🔒 このメモはこの端末にのみ自動保存されます。共有端末では個人情報を書きすぎないようご注意ください。
+          🔒 この端末に自動保存されます
         </p>
-        {[
-          { key: "meetingPlace",      label: "家族の集合場所",            placeholder: "例：○○公園・○○小学校" },
-          { key: "emergencyContact",  label: "緊急連絡先メモ",            placeholder: "例：母 090-XXXX-XXXX" },
-          { key: "parentsEvacuation", label: "実家・親の避難場所",         placeholder: "例：△△市△△小学校" },
-          { key: "specialNotes",      label: "ペット・薬・持病などのメモ", placeholder: "例：犬あり / 血圧の薬" },
-        ].map(({ key, label, placeholder }) => (
-          <div key={key} className="memo-field">
-            <label className="memo-label">{label}</label>
-            <textarea
-              className="memo-input"
-              rows={2}
-              placeholder={placeholder}
-              value={familyMemo[key] ?? ""}
-              onChange={(e) => updateMemo(key, e.target.value)}
-            />
-          </div>
-        ))}
-        {memoSaved && (
-          <p className="memo-saved-note">✓ 保存しました</p>
+        {!showMemo ? (
+          <button
+            className="ground-scale-toggle memo-expand-btn"
+            onClick={() => setShowMemo(true)}
+          >
+            ▼ 入力する
+          </button>
+        ) : (
+          <>
+            <p className="memo-privacy-sub">
+              共有端末では個人情報を書きすぎないようご注意ください。
+            </p>
+            {[
+              { key: "meetingPlace",      label: "家族の集合場所",            placeholder: "例：○○公園・○○小学校" },
+              { key: "emergencyContact",  label: "緊急連絡先メモ",            placeholder: "例：母 090-XXXX-XXXX" },
+              { key: "parentsEvacuation", label: "実家・親の避難場所",         placeholder: "例：△△市△△小学校" },
+              { key: "specialNotes",      label: "ペット・薬・持病などのメモ", placeholder: "例：犬あり / 血圧の薬" },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key} className="memo-field">
+                <label className="memo-label">{label}</label>
+                <textarea
+                  className="memo-input"
+                  rows={2}
+                  placeholder={placeholder}
+                  value={familyMemo[key] ?? ""}
+                  onChange={(e) => updateMemo(key, e.target.value)}
+                />
+              </div>
+            ))}
+            {memoSaved && (
+              <p className="memo-saved-note">✓ 保存しました</p>
+            )}
+            <button
+              className="ground-scale-toggle memo-collapse-btn"
+              onClick={() => setShowMemo(false)}
+            >
+              ▲ 閉じる
+            </button>
+          </>
         )}
       </section>
 
