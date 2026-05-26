@@ -380,7 +380,7 @@ export default function Home() {
             </>
           ) : (
             <>
-              参考：正式版では
+              参考：
               <a
                 href="https://www.j-shis.bosai.go.jp/"
                 target="_blank"
@@ -389,7 +389,7 @@ export default function Home() {
               >
                 J-SHIS 地震ハザードステーション
               </a>
-              等の公的データ連携を予定（現在はサンプル値）
+              等の公的情報（現在はサンプル値）
             </>
           )}
         </p>
