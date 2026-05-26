@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { regionRiskData } from "../data/earthquakeData";
 import DisclaimerBanner from "../components/DisclaimerBanner";
@@ -81,7 +81,7 @@ export default function Home() {
   const [geoState, setGeoState] = useState("idle"); // 'idle' | 'confirm' | 'loading' | 'error'
   const [showInput, setShowInput] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [riskData, setRiskData] = useState(null);  // null = demo, {source:"jshis",...} = 公的データ
+  const [riskData, setRiskData] = useState(null);
   const [riskLoading, setRiskLoading] = useState(false);
   const [geoCoords, setGeoCoords] = useState(() => {
     const lat = parseFloat(localStorage.getItem("regionLat"));
@@ -94,7 +94,6 @@ export default function Home() {
     try { return JSON.parse(localStorage.getItem("familyMemo") || "{}"); }
     catch { return {}; }
   });
-  // "initial" | "geo" | "text"
   const [inputMode, setInputMode] = useState(() => {
     const label = localStorage.getItem("regionLabel");
     if (label === "現在地周辺") return "geo";
@@ -102,9 +101,15 @@ export default function Home() {
     return "initial";
   });
 
+  // 新規状態
+  const [memoSaved, setMemoSaved] = useState(false);
+  const [showCampDetail, setShowCampDetail] = useState(false);
+  const [showLinks, setShowLinks] = useState(false);
+  const [showFooterDetail, setShowFooterDetail] = useState(false);
+  const memoTimerRef = useRef(null);
+
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
 
-  // J-SHIS取得成功時はRiskMapページで参照できるようキャッシュ保存
   useEffect(() => {
     if (riskData?.source === "jshis" && riskData?.risk30year != null) {
       localStorage.setItem("cachedRiskData", JSON.stringify({
@@ -119,7 +124,6 @@ export default function Home() {
     localStorage.setItem("regionLabel", regionLabel);
   }, [regionKey, regionLabel]);
 
-  // 初回起動時: 現在地モードで保存済み座標があればJ-SHIS取得を試みる
   useEffect(() => {
     const label = localStorage.getItem("regionLabel");
     if (label !== "現在地周辺") return;
@@ -163,7 +167,7 @@ export default function Home() {
     if (!text) return;
     setGeoCoords(null);
     setInputMode("text");
-    setRiskData(null); // テキスト入力はデモ値のみ（緯度経度不明のためJ-SHIS未呼び出し）
+    setRiskData(null);
     const key = matchRegionByKeyword(text);
     setRegionKey(key);
     setRegionLabel(text);
@@ -184,7 +188,6 @@ export default function Home() {
     return "比較的低い";
   };
 
-  // デモ用: groundIndex(1/2/3+) → GROUND_LEVELS エントリを返す
   const getGroundByIndex = (index) => {
     const level = index === 1 ? 1 : index === 2 ? 3 : 5;
     return GROUND_LEVELS.find((g) => g.level === level) ?? GROUND_LEVELS[2];
@@ -219,6 +222,9 @@ export default function Home() {
       localStorage.setItem("familyMemo", JSON.stringify(next));
       return next;
     });
+    setMemoSaved(true);
+    if (memoTimerRef.current) clearTimeout(memoTimerRef.current);
+    memoTimerRef.current = setTimeout(() => setMemoSaved(false), 2000);
   };
 
   const getRiskProposal = (risk) => {
@@ -243,6 +249,28 @@ export default function Home() {
   const riskProposal   = getRiskProposal(displayRisk30);
   const groundProposal = getGroundProposal(currentGroundLevel);
   const prepProposal   = getPrepProposal(prepPercent);
+
+  const getFirstThings = () => {
+    const items = [];
+    if (prepPercent <= 30) {
+      items.push({ icon: "💧", text: "飲料水・非常食・モバイルバッテリーの3つを今すぐ準備しましょう。" });
+    } else if (prepPercent <= 70) {
+      items.push({ icon: "🎒", text: "基本の備えが進んでいます。家族の連絡手段と集合場所を確認しましょう。" });
+    } else {
+      items.push({ icon: "✅", text: "備えはよく進んでいます。食料・電池の期限を定期的に確認しましょう。" });
+    }
+    if (currentGroundLevel >= 4) {
+      items.push({ icon: "🪑", text: "揺れやすい地盤です。寝室・リビングの家具固定を優先しましょう。" });
+    } else {
+      items.push({ icon: "🪑", text: "家具の固定と避難場所の確認を行っておきましょう。" });
+    }
+    if (displayRisk30 >= 26) {
+      items.push({ icon: "🏫", text: "長期地震リスクが高めです。避難場所・避難経路を家族で確認してください。" });
+    } else {
+      items.push({ icon: "📞", text: "災害用伝言ダイヤル（171）の使い方を家族で確認しておきましょう。" });
+    }
+    return items;
+  };
 
   return (
     <div className="page">
@@ -339,124 +367,71 @@ export default function Home() {
         <p className="region-note">※ 入力した地域の周辺を参考に表示しています。正確なリスクは公式サービスでご確認ください。</p>
       </section>
 
-      {/* 長期地震リスク */}
-      <section className="card risk-card">
+      {/* 防災サマリー */}
+      <section className="card summary-card">
         <div className="card-header">
-          <span className="card-icon">📊</span>
-          <h2 className="card-title">長期地震リスク</h2>
+          <span className="card-icon">🛡️</span>
+          <h2 className="card-title">防災サマリー</h2>
         </div>
-        <p className="risk-subtitle">
-          {isJshis
-            ? "今後30年以内に震度6弱以上の揺れに見舞われる確率"
-            : "地域の長期地震リスク指標（30年スケール参考値）"}
-        </p>
-        {!isJshis && !riskLoading && inputMode !== "initial" && (
-          <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
-        )}
-        <div className="risk-datasource">
-          データ種別：
-          {riskLoading ? (
-            <span className="datasource-badge">取得中…</span>
-          ) : isJshis ? (
-            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
-          ) : (
-            <span className="datasource-badge datasource-badge--demo">デモ用サンプル</span>
-          )}
-        </div>
-        {inputMode === "geo" && riskData?.source === "demo" && !riskLoading && (
-          <>
-            <p className="risk-api-fail-note">
-              J-SHISデータの取得に失敗したため、サンプル値を表示しています。
-            </p>
-            {riskData?.failReason && (
-              <div className="risk-api-fail-debug">
-                <p className="risk-api-fail-reason">取得失敗理由：{riskData.failReason}</p>
-                {riskData?.failDebug?.requestUrl && (
-                  <p className="risk-api-fail-reason">リクエストURL：{riskData.failDebug.requestUrl}</p>
-                )}
-                {riskData?.failDebug?.responseText && (
-                  <p className="risk-api-fail-reason">J-SHISエラー本文：{riskData.failDebug.responseText}</p>
-                )}
-              </div>
-            )}
-          </>
-        )}
-        {inputMode === "text" && !riskLoading && (
-          <p className="risk-text-input-note">
-            市区町村名入力時は参考サンプル値を表示しています。現在地取得時はJ-SHIS公的データを使用します。
-          </p>
-        )}
-        <div className="risk-display">
-          <div
-            className="risk-circle"
-            style={{ borderColor: riskColor, color: riskColor }}
-          >
-            <span className="risk-percent">{displayRisk30}</span>
-            <span className="risk-unit">%</span>
+        <div className="summary-grid">
+          <div className="summary-item">
+            <span className="summary-label">選択地域</span>
+            <span className="summary-value">{regionLabel}</span>
           </div>
-          <div className="risk-info">
-            <div className="risk-level" style={{ color: riskColor }}>
-              リスク：{getRiskLabel(displayRisk30)}
+          <div className="summary-item">
+            <span className="summary-label">長期地震リスク</span>
+            <span className="summary-value" style={{ color: riskLoading ? undefined : riskColor }}>
+              {riskLoading ? "取得中…" : `${displayRisk30}%（${getRiskLabel(displayRisk30)}）`}
+            </span>
+          </div>
+          {!riskLoading && getRiskLabel(displayRisk30) === "比較的低い" && (
+            <div className="summary-item summary-item--note">
+              <span className="risk-low-note">※ 比較的低い＝地震が起きないという意味ではありません</span>
             </div>
-            <div className="risk-region">{regionLabel}</div>
+          )}
+          <div className="summary-item">
+            <span className="summary-label">データ種別</span>
+            <span className="summary-value">
+              {riskLoading ? "—" : isJshis ? (
+                <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+              ) : (
+                <span className="datasource-badge datasource-badge--demo">サンプル</span>
+              )}
+            </span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">揺れやすさ</span>
+            <span className="summary-value" style={{ color: ground.color }}>
+              {ground.icon} {ground.label}
+            </span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">備え進捗</span>
+            <span
+              className="summary-value"
+              style={{ color: prepPercent >= 70 ? "#27ae60" : prepPercent >= 40 ? "#f39c12" : "#e67e22" }}
+            >
+              {prepPercent}%（{checklistCount}/{totalItems}項目）
+            </span>
           </div>
         </div>
-        <div className="risk-bar-wrap">
-          <div
-            className="risk-bar"
-            style={{
-              width: `${Math.min(displayRisk30, 100)}%`,
-              backgroundColor: riskColor,
-            }}
-          />
-        </div>
-        <p className="risk-source">
-          {isJshis ? (
-            <>
-              出典：
-              <a
-                href="https://www.j-shis.bosai.go.jp/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="source-link"
-              >
-                J-SHIS 地震ハザードステーション（防災科学技術研究所）
-              </a>
-            </>
-          ) : (
-            <>
-              参考：
-              <a
-                href="https://www.j-shis.bosai.go.jp/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="source-link"
-              >
-                J-SHIS 地震ハザードステーション
-              </a>
-              等の公的情報（現在はサンプル値）
-            </>
-          )}
-        </p>
+      </section>
 
-        {isJshis && riskData.intensities && (
-          <div className="risk-intensities">
-            <p className="risk-intensities-title">長期地震リスク詳細（J-SHIS公的データ）</p>
-            <div className="risk-intensities-grid">
-              {[
-                { label: "震度6弱以上（30年）", val: riskData.intensities.i55 },
-              ].filter(({ val }) => val != null).map(({ label, val }) => (
-                <div key={label} className="risk-intensity-item">
-                  <span className="risk-intensity-label">{label}</span>
-                  <span className="risk-intensity-value">{val}%</span>
-                </div>
-              ))}
+      {/* まずやること */}
+      <section className="card firstthings-card">
+        <div className="card-header">
+          <span className="card-icon">✅</span>
+          <h2 className="card-title">まずやること</h2>
+        </div>
+        <div className="firstthings-list">
+          {getFirstThings().map(({ icon, text }, i) => (
+            <div key={i} className="firstthing-item">
+              <span className="firstthing-num">{i + 1}</span>
+              <span className="firstthing-icon">{icon}</span>
+              <span className="firstthing-text">{text}</span>
             </div>
-            {riskData.meshCode && (
-              <p className="risk-mesh-note">メッシュコード：{riskData.meshCode}</p>
-            )}
-          </div>
-        )}
+          ))}
+        </div>
       </section>
 
       {/* あなたへの備え提案 */}
@@ -482,6 +457,37 @@ export default function Home() {
           </div>
         </div>
         <Link to="/prep-check" className="btn btn-primary proposal-btn">
+          備えチェックリストを確認する →
+        </Link>
+      </section>
+
+      {/* 備えチェック */}
+      <section className="card prep-card">
+        <div className="card-header">
+          <span className="card-icon">🎒</span>
+          <h2 className="card-title">備えチェック</h2>
+        </div>
+        <div className="prep-progress-wrap">
+          <div className="prep-progress-header">
+            <span className="prep-progress-label">準備度</span>
+            <span className="prep-progress-value" style={{ color: prepPercent >= 70 ? "#27ae60" : prepPercent >= 40 ? "#f39c12" : "#e67e22" }}>
+              {prepPercent}%
+            </span>
+          </div>
+          <div className="prep-progress-bar-bg">
+            <div
+              className="prep-progress-bar"
+              style={{
+                width: `${prepPercent}%`,
+                backgroundColor: prepPercent >= 70 ? "#27ae60" : prepPercent >= 40 ? "#f39c12" : "#e67e22",
+              }}
+            />
+          </div>
+          <p className="prep-progress-desc">
+            {checklistCount} / {totalItems} 項目チェック済み
+          </p>
+        </div>
+        <Link to="/prep-check" className="btn btn-primary">
           備えチェックリストを確認する →
         </Link>
       </section>
@@ -567,60 +573,40 @@ export default function Home() {
         </a>
       </section>
 
-      {/* 備えチェック */}
-      <section className="card prep-card">
-        <div className="card-header">
-          <span className="card-icon">🎒</span>
-          <h2 className="card-title">備えチェック</h2>
-        </div>
-        <div className="prep-progress-wrap">
-          <div className="prep-progress-header">
-            <span className="prep-progress-label">準備度</span>
-            <span className="prep-progress-value" style={{ color: prepPercent >= 70 ? "#27ae60" : prepPercent >= 40 ? "#f39c12" : "#e67e22" }}>
-              {prepPercent}%
-            </span>
-          </div>
-          <div className="prep-progress-bar-bg">
-            <div
-              className="prep-progress-bar"
-              style={{
-                width: `${prepPercent}%`,
-                backgroundColor: prepPercent >= 70 ? "#27ae60" : prepPercent >= 40 ? "#f39c12" : "#e67e22",
-              }}
-            />
-          </div>
-          <p className="prep-progress-desc">
-            {checklistCount} / {totalItems} 項目チェック済み
-          </p>
-        </div>
-        <Link to="/prep-check" className="btn btn-primary">
-          備えチェックリストを確認する →
-        </Link>
-      </section>
-
       {/* キャンプ用品の防災転用 */}
       <section className="card camp-card">
         <div className="card-header">
           <span className="card-icon">⛺</span>
           <h2 className="card-title">キャンプ用品は防災にも使えます</h2>
         </div>
-        <p className="camp-desc">
-          ランタン・寝袋・ウォータータンク・カセットコンロ・ポータブル電源などは、停電や避難時にも役立ちます。普段使っている道具を、防災目線でも確認しておきましょう。
-        </p>
-        <div className="camp-items">
-          {[
-            { icon: "🏮", label: "LEDランタン" },
-            { icon: "🛌", label: "寝袋" },
-            { icon: "🍳", label: "カセットコンロ" },
-            { icon: "🪣", label: "ウォータータンク" },
-            { icon: "⚡", label: "ポータブル電源" },
-          ].map(({ icon, label }) => (
-            <div key={label} className="camp-item">
-              <span className="camp-item-icon">{icon}</span>
-              <span className="camp-item-label">{label}</span>
+        <button
+          className="ground-scale-toggle"
+          onClick={() => setShowCampDetail((v) => !v)}
+          aria-expanded={showCampDetail}
+        >
+          {showCampDetail ? "▲ 閉じる" : "▼ 詳しく見る"}
+        </button>
+        {showCampDetail && (
+          <>
+            <p className="camp-desc">
+              ランタン・寝袋・ウォータータンク・カセットコンロ・ポータブル電源などは、停電や避難時にも役立ちます。普段使っている道具を、防災目線でも確認しておきましょう。
+            </p>
+            <div className="camp-items">
+              {[
+                { icon: "🏮", label: "LEDランタン" },
+                { icon: "🛌", label: "寝袋" },
+                { icon: "🍳", label: "カセットコンロ" },
+                { icon: "🪣", label: "ウォータータンク" },
+                { icon: "⚡", label: "ポータブル電源" },
+              ].map(({ icon, label }) => (
+                <div key={label} className="camp-item">
+                  <span className="camp-item-icon">{icon}</span>
+                  <span className="camp-item-label">{label}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </section>
 
       {/* 家族の防災メモ */}
@@ -630,7 +616,7 @@ export default function Home() {
           <h2 className="card-title">家族の防災メモ</h2>
         </div>
         <p className="memo-privacy-note">
-          🔒 このメモは端末内にのみ保存されます。共有端末では個人情報を書きすぎないようご注意ください。
+          🔒 このメモはこの端末にのみ自動保存されます。共有端末では個人情報を書きすぎないようご注意ください。
         </p>
         {[
           { key: "meetingPlace",      label: "家族の集合場所",            placeholder: "例：○○公園・○○小学校" },
@@ -649,6 +635,9 @@ export default function Home() {
             />
           </div>
         ))}
+        {memoSaved && (
+          <p className="memo-saved-note">✓ 保存しました</p>
+        )}
       </section>
 
       {/* 公式情報リンク */}
@@ -657,34 +646,52 @@ export default function Home() {
           <span className="card-icon">🔗</span>
           <h2 className="card-title">公式情報リンク</h2>
         </div>
-        <div className="external-links">
-          {[
-            { icon: "🗾", label: "J-SHIS 地震ハザードステーション",  url: "https://www.j-shis.bosai.go.jp/" },
-            { icon: "🌤️", label: "気象庁 地震情報",                  url: "https://www.jma.go.jp/jma/index.html" },
-            { icon: "🗺️", label: "ハザードマップポータルサイト",      url: "https://disaportal.gsi.go.jp/" },
-            { icon: "🏛️", label: "内閣府 防災情報のページ",           url: "https://www.bousai.go.jp/" },
-          ].map(({ icon, label, url }) => (
-            <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="external-link-btn">
-              {icon} {label}
-            </a>
-          ))}
-        </div>
+        <button
+          className="ground-scale-toggle"
+          onClick={() => setShowLinks((v) => !v)}
+          aria-expanded={showLinks}
+        >
+          {showLinks ? "▲ 閉じる" : "▼ 公式サイトを見る"}
+        </button>
+        {showLinks && (
+          <div className="external-links">
+            {[
+              { icon: "🗾", label: "J-SHIS 地震ハザードステーション",  url: "https://www.j-shis.bosai.go.jp/" },
+              { icon: "🌤️", label: "気象庁 地震情報",                  url: "https://www.jma.go.jp/jma/index.html" },
+              { icon: "🗺️", label: "ハザードマップポータルサイト",      url: "https://disaportal.gsi.go.jp/" },
+              { icon: "🏛️", label: "内閣府 防災情報のページ",           url: "https://www.bousai.go.jp/" },
+            ].map(({ icon, label, url }) => (
+              <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="external-link-btn">
+                {icon} {label}
+              </a>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* フッター免責 */}
       <footer className="home-footer">
-        <div className="footer-disclaimer">
-          <p>
-            🛡️ <strong>地震そなえナビ</strong>は地震予知・地震予報を行うものではありません。
-          </p>
-          <p>
-            現在地取得時の長期地震リスクは、J-SHIS等の公的情報を参考に表示しています。一部の表示や避難所情報はデモ用サンプルを含みます。
-          </p>
-          <p>
-            実際の防災判断は、自治体・気象庁・J-SHIS等の公式情報をご確認ください。
-          </p>
-          <p>個人情報は収集していません。データは端末内（localStorage）にのみ保存されます。</p>
-        </div>
+        <p className="footer-main-note">
+          🛡️ <strong>地震そなえナビ</strong>は地震予知・地震予報を行うものではありません。
+        </p>
+        <button
+          className="ground-scale-toggle footer-detail-toggle"
+          onClick={() => setShowFooterDetail((v) => !v)}
+          aria-expanded={showFooterDetail}
+        >
+          {showFooterDetail ? "▲ 詳細免責事項を閉じる" : "▼ 詳細免責事項を見る"}
+        </button>
+        {showFooterDetail && (
+          <div className="footer-disclaimer">
+            <p>
+              現在地取得時の長期地震リスクは、J-SHIS等の公的情報を参考に表示しています。一部の表示や避難所情報はデモ用サンプルを含みます。
+            </p>
+            <p>
+              実際の防災判断は、自治体・気象庁・J-SHIS等の公式情報をご確認ください。
+            </p>
+            <p>個人情報は収集していません。データは端末内（localStorage）にのみ保存されます。</p>
+          </div>
+        )}
         <p className="footer-copy">© 2025 地震そなえナビ</p>
       </footer>
     </div>
