@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { regionRiskData } from "../data/earthquakeData";
 import DisclaimerBanner from "../components/DisclaimerBanner";
+import { fetchJshisRisk } from "../lib/jshis";
 
 const regionKeywords = {
   tokyo:     ["東京", "23区", "千代田", "新宿", "渋谷", "港区", "品川", "世田谷", "練馬", "豊島", "杉並"],
@@ -61,6 +62,8 @@ export default function Home() {
   const [geoState, setGeoState] = useState("idle"); // 'idle' | 'confirm' | 'loading' | 'error'
   const [showInput, setShowInput] = useState(false);
   const [inputText, setInputText] = useState("");
+  const [riskData, setRiskData] = useState(null);  // null = demo, {source:"jshis",...} = 公的データ
+  const [riskLoading, setRiskLoading] = useState(false);
 
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
 
@@ -68,6 +71,23 @@ export default function Home() {
     localStorage.setItem("regionKey", regionKey);
     localStorage.setItem("regionLabel", regionLabel);
   }, [regionKey, regionLabel]);
+
+  // 初回起動時: 保存済み座標があればJ-SHIS取得を試みる
+  useEffect(() => {
+    const lat = parseFloat(localStorage.getItem("regionLat"));
+    const lng = parseFloat(localStorage.getItem("regionLng"));
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setRiskLoading(true);
+      fetchJshisRisk(lat, lng).then((d) => { setRiskData(d); setRiskLoading(false); });
+      return;
+    }
+    const key = localStorage.getItem("regionKey") || localStorage.getItem("selectedRegion") || "tokyo";
+    const coords = regionCoords[key];
+    if (coords && key !== "other") {
+      setRiskLoading(true);
+      fetchJshisRisk(coords.lat, coords.lng).then((d) => { setRiskData(d); setRiskLoading(false); });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGeoRequest = () => {
     if (!navigator.geolocation) { setGeoState("error"); return; }
@@ -82,6 +102,11 @@ export default function Home() {
         setRegionKey(key);
         setRegionLabel(regionRiskData[key].name + "（現在地周辺）");
         setGeoState("idle");
+        localStorage.setItem("regionLat", latitude.toString());
+        localStorage.setItem("regionLng", longitude.toString());
+        setRiskLoading(true);
+        setRiskData(null);
+        fetchJshisRisk(latitude, longitude).then((d) => { setRiskData(d); setRiskLoading(false); });
       },
       () => setGeoState("error"),
       { timeout: 10000 }
@@ -91,10 +116,21 @@ export default function Home() {
   const handleSearch = () => {
     const text = inputText.trim();
     if (!text) return;
-    setRegionKey(matchRegionByKeyword(text));
+    const key = matchRegionByKeyword(text);
+    setRegionKey(key);
     setRegionLabel(text);
     setShowInput(false);
     setInputText("");
+    const coords = regionCoords[key];
+    if (coords) {
+      localStorage.setItem("regionLat", coords.lat.toString());
+      localStorage.setItem("regionLng", coords.lng.toString());
+      setRiskLoading(true);
+      setRiskData(null);
+      fetchJshisRisk(coords.lat, coords.lng).then((d) => { setRiskData(d); setRiskLoading(false); });
+    } else {
+      setRiskData(null);
+    }
   };
 
   const getRiskColor = (risk) => {
@@ -117,7 +153,9 @@ export default function Home() {
   };
 
   const ground = getGroundLabel(region.groundIndex);
-  const riskColor = getRiskColor(region.risk30year);
+  const isJshis = riskData?.source === "jshis";
+  const displayRisk30 = isJshis ? riskData.risk30year : region.risk30year;
+  const riskColor = getRiskColor(displayRisk30);
 
   const checklistCount = (() => {
     try {
@@ -217,7 +255,7 @@ export default function Home() {
           </div>
         )}
 
-        <p className="region-note">※ デモ用データです。正確なリスクは J-SHIS でご確認ください。</p>
+        <p className="region-note">※ 入力した地域の周辺を参考に表示しています。正確なリスクは公式サービスでご確認ください。</p>
       </section>
 
       {/* 長期地震リスク */}
@@ -227,18 +265,30 @@ export default function Home() {
           <h2 className="card-title">長期地震リスク（デモ）</h2>
         </div>
         <p className="risk-subtitle">地域の長期地震リスク指標（30年スケール参考値）</p>
-        <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
+        {!isJshis && !riskLoading && (
+          <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
+        )}
+        <div className="risk-datasource">
+          データ種別：
+          {riskLoading ? (
+            <span className="datasource-badge">取得中…</span>
+          ) : isJshis ? (
+            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+          ) : (
+            <span className="datasource-badge datasource-badge--demo">デモ用サンプル</span>
+          )}
+        </div>
         <div className="risk-display">
           <div
             className="risk-circle"
             style={{ borderColor: riskColor, color: riskColor }}
           >
-            <span className="risk-percent">{region.risk30year}</span>
+            <span className="risk-percent">{displayRisk30}</span>
             <span className="risk-unit">%</span>
           </div>
           <div className="risk-info">
             <div className="risk-level" style={{ color: riskColor }}>
-              リスク：{getRiskLabel(region.risk30year)}
+              リスク：{getRiskLabel(displayRisk30)}
             </div>
             <div className="risk-region">{regionLabel}</div>
           </div>
@@ -247,22 +297,38 @@ export default function Home() {
           <div
             className="risk-bar"
             style={{
-              width: `${Math.min(region.risk30year, 100)}%`,
+              width: `${Math.min(displayRisk30, 100)}%`,
               backgroundColor: riskColor,
             }}
           />
         </div>
         <p className="risk-source">
-          参考：正式版では
-          <a
-            href="https://www.j-shis.bosai.go.jp/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="source-link"
-          >
-            J-SHIS 地震ハザードステーション
-          </a>
-          等の公的データ連携を予定（現在はサンプル値）
+          {isJshis ? (
+            <>
+              出典：
+              <a
+                href="https://www.j-shis.bosai.go.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="source-link"
+              >
+                J-SHIS 地震ハザードステーション（防災科学技術研究所）
+              </a>
+            </>
+          ) : (
+            <>
+              参考：正式版では
+              <a
+                href="https://www.j-shis.bosai.go.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="source-link"
+              >
+                J-SHIS 地震ハザードステーション
+              </a>
+              等の公的データ連携を予定（現在はサンプル値）
+            </>
+          )}
         </p>
       </section>
 
