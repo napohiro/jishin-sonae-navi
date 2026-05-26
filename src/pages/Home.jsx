@@ -103,6 +103,8 @@ export default function Home() {
   });
 
   // 新規状態
+  const [shelterData, setShelterData] = useState(null);
+  const [shelterLoading, setShelterLoading] = useState(false);
   const [memoSaved, setMemoSaved] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
   const [showCampDetail, setShowCampDetail] = useState(false);
@@ -111,6 +113,20 @@ export default function Home() {
   const memoTimerRef = useRef(null);
 
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
+  const hasGeo = geoCoords !== null && regionLabel === "現在地周辺";
+
+  const fetchShelters = async (lat, lng) => {
+    setShelterLoading(true);
+    setShelterData(null);
+    try {
+      const res = await fetch(`/api/shelters?lat=${lat}&lon=${lng}`);
+      setShelterData(await res.json());
+    } catch {
+      setShelterData({ status: "error", items: [] });
+    } finally {
+      setShelterLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (riskData?.source === "jshis" && riskData?.risk30year != null) {
@@ -135,6 +151,7 @@ export default function Home() {
     setRiskLoading(true);
     fetchJshisRisk(lat, lng).then((d) => { setRiskData(d); setRiskLoading(false); });
     fetchJshisSurfaceGround(lat, lng).then((d) => setGroundData(d));
+    fetchShelters(lat, lng);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGeoRequest = () => {
@@ -158,6 +175,7 @@ export default function Home() {
         setGroundData(null);
         fetchJshisRisk(latitude, longitude).then((d) => { setRiskData(d); setRiskLoading(false); });
         fetchJshisSurfaceGround(latitude, longitude).then((d) => setGroundData(d));
+        fetchShelters(latitude, longitude);
       },
       () => setGeoState("error"),
       { timeout: 10000 }
@@ -708,26 +726,113 @@ export default function Home() {
         )}
       </section>
 
-      {/* 近くの避難所 */}
+      {/* 近くの避難先候補 */}
       <section className="card shelter-card">
         <div className="card-header">
           <span className="card-icon">🏫</span>
-          <h2 className="card-title">近くの避難所（デモ）</h2>
+          <h2 className="card-title">近くの避難先候補</h2>
         </div>
-        <div className="shelter-info">
-          <div className="shelter-name">{region.nearestShelter}</div>
-          <div className="shelter-note">
-            ※ 実際の避難所は自治体のハザードマップでご確認ください
-          </div>
-        </div>
-        <a
-          href="https://disaportal.gsi.go.jp/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-outline"
-        >
-          国土交通省 ハザードマップポータルで確認 →
-        </a>
+
+        {!hasGeo ? (
+          <>
+            <p className="shelter-no-geo">
+              「現在地から調べる」を実行すると、近くの避難先候補を表示できます。
+            </p>
+            <a
+              href="https://disaportal.gsi.go.jp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+            >
+              ハザードマップポータルで確認 →
+            </a>
+          </>
+        ) : shelterLoading ? (
+          <p className="shelter-loading">📡 避難所データを取得中…</p>
+        ) : shelterData?.status === "success" && shelterData.items.length > 0 ? (
+          <>
+            <p className="shelter-disclaimer">
+              ⚠ 表示される避難先は参考情報です。災害種別・開設状況によって利用できない場合があります。実際の避難判断は自治体・ハザードマップ等の公式情報をご確認ください。
+            </p>
+            <div className="shelter-list">
+              {shelterData.items.map((item, i) => (
+                <div key={i} className="shelter-item">
+                  <div className="shelter-item-header">
+                    <span className="shelter-item-name">{item.name}</span>
+                    <span className="shelter-item-distance">約{item.distanceKm}km</span>
+                  </div>
+                  <div className="shelter-item-type">{item.type}</div>
+                  {item.address && (
+                    <div className="shelter-item-address">📍 {item.address}</div>
+                  )}
+                  {item.disasterTypes.length > 0 && (
+                    <div className="shelter-disaster-tags">
+                      {item.disasterTypes.map((t) => (
+                        <span
+                          key={t}
+                          className={`shelter-disaster-tag${t === "地震" ? " shelter-disaster-tag--eq" : ""}`}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${item.lat}&mlon=${item.lon}&zoom=16`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shelter-map-link"
+                  >
+                    地図で確認 →
+                  </a>
+                </div>
+              ))}
+            </div>
+            <p className="shelter-source">
+              出典：
+              <a
+                href="https://www.gsi.go.jp/bousai/hinanbasho.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="source-link"
+              >
+                国土地理院 指定緊急避難場所・指定避難所データ
+              </a>
+            </p>
+            <a
+              href="https://disaportal.gsi.go.jp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline shelter-portal-btn"
+            >
+              ハザードマップポータルで詳しく確認 →
+            </a>
+          </>
+        ) : (
+          <>
+            <p className="shelter-error">
+              近くの避難先候補を取得できませんでした。自治体のハザードマップや国土地理院の情報をご確認ください。
+            </p>
+            <div className="shelter-fallback-links">
+              <a
+                href="https://disaportal.gsi.go.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="external-link-btn"
+              >
+                🗺️ 国土交通省 ハザードマップポータル
+              </a>
+              <a
+                href="https://www.gsi.go.jp/bousai/hinanbasho.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="external-link-btn"
+              >
+                🗾 国土地理院 指定緊急避難場所データ
+              </a>
+            </div>
+          </>
+        )}
       </section>
 
       {/* キャンプ用品の防災転用 */}
