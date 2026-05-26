@@ -104,6 +104,16 @@ export default function Home() {
 
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
 
+  // J-SHIS取得成功時はRiskMapページで参照できるようキャッシュ保存
+  useEffect(() => {
+    if (riskData?.source === "jshis" && riskData?.risk30year != null) {
+      localStorage.setItem("cachedRiskData", JSON.stringify({
+        source: "jshis",
+        risk30year: riskData.risk30year,
+      }));
+    }
+  }, [riskData]);
+
   useEffect(() => {
     localStorage.setItem("regionKey", regionKey);
     localStorage.setItem("regionLabel", regionLabel);

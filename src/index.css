@@ -911,6 +911,57 @@ button {
   overflow: hidden;
 }
 
+/* Leaflet地図コンテナ */
+.leaflet-map {
+  height: 320px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  z-index: 0;
+}
+
+/* 地図ポップアップ */
+.map-popup {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* 地図下のサマリーカード */
+.map-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.map-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  gap: 0.5rem;
+}
+
+.map-info-label {
+  color: var(--color-text-light);
+  flex-shrink: 0;
+}
+
+.map-info-value {
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.map-no-geo-note {
+  font-size: 0.825rem;
+  color: var(--color-text-light);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
 .map-container {
   margin-bottom: 1rem;
 }
@@ -1146,6 +1197,39 @@ button {
 .earthquake-depth {
   font-size: 0.775rem;
   color: var(--color-text-muted);
+}
+
+/* 新フォーマット用 */
+.earthquake-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.earthquake-area {
+  font-size: 0.825rem;
+  color: var(--color-text-light);
+}
+
+.earthquake-note {
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+  padding-top: 0.1rem;
+}
+
+.earthquake-disclaimer {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  background: #f5f7fa;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.earthquake-more-btn {
+  width: 100%;
+  margin-bottom: 0.75rem;
 }
 
 .earthquake-source {

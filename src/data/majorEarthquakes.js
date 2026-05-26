@@ -1,0 +1,86 @@
+// 近年の主な地震記録（参考データ）
+// リアルタイム速報ではなく、主要な過去地震の記録です。
+// 将来的にDMDATA.JPや気象庁API連携に差し替えやすい構造にしています。
+
+export const majorEarthquakes = [
+  {
+    date: "2024/01/01",
+    name: "令和6年能登半島地震",
+    area: "石川県能登地方",
+    magnitude: "M7.6",
+    maxIntensity: "最大震度7",
+    note: "津波や家屋被害が発生",
+  },
+  {
+    date: "2023/05/05",
+    name: "石川県能登地方の地震",
+    area: "石川県能登地方",
+    magnitude: "M6.5",
+    maxIntensity: "最大震度6強",
+    note: "能登地方で強い揺れ",
+  },
+  {
+    date: "2022/03/16",
+    name: "福島県沖の地震",
+    area: "福島県沖",
+    magnitude: "M7.4",
+    maxIntensity: "最大震度6強",
+    note: "東北地方を中心に強い揺れ",
+  },
+  {
+    date: "2021/02/13",
+    name: "福島県沖の地震",
+    area: "福島県沖",
+    magnitude: "M7.3",
+    maxIntensity: "最大震度6強",
+    note: "広い範囲で強い揺れ",
+  },
+  {
+    date: "2018/09/06",
+    name: "北海道胆振東部地震",
+    area: "北海道胆振地方中東部",
+    magnitude: "M6.7",
+    maxIntensity: "最大震度7",
+    note: "大規模停電などが発生",
+  },
+  {
+    date: "2018/06/18",
+    name: "大阪府北部の地震",
+    area: "大阪府北部",
+    magnitude: "M6.1",
+    maxIntensity: "最大震度6弱",
+    note: "都市部で強い揺れ",
+  },
+  {
+    date: "2016/04/16",
+    name: "熊本地震 本震",
+    area: "熊本県熊本地方",
+    magnitude: "M7.3",
+    maxIntensity: "最大震度7",
+    note: "前震後に本震が発生",
+  },
+  {
+    date: "2016/04/14",
+    name: "熊本地震 前震",
+    area: "熊本県熊本地方",
+    magnitude: "M6.5",
+    maxIntensity: "最大震度7",
+    note: "一連の熊本地震の前震",
+  },
+  {
+    date: "2011/03/11",
+    name: "東北地方太平洋沖地震",
+    area: "三陸沖",
+    magnitude: "M9.0",
+    maxIntensity: "最大震度7",
+    note: "東日本大震災を引き起こした巨大地震",
+  },
+  {
+    date: "1995/01/17",
+    name: "兵庫県南部地震",
+    area: "淡路島北部",
+    magnitude: "M7.3",
+    maxIntensity: "最大震度7",
+    note: "阪神・淡路大震災を引き起こした地震",
+  },
+];

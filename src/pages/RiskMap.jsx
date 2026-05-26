@@ -1,27 +1,47 @@
 import { useState } from "react";
-import { recentEarthquakes, mapZones } from "../data/earthquakeData";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { majorEarthquakes } from "../data/majorEarthquakes";
 import DisclaimerBanner from "../components/DisclaimerBanner";
 
+// LocalStorageから現在地情報を取得
+function readGeoInfo() {
+  const lat = parseFloat(localStorage.getItem("regionLat"));
+  const lng = parseFloat(localStorage.getItem("regionLng"));
+  const label = localStorage.getItem("regionLabel");
+  const hasGeo = !isNaN(lat) && !isNaN(lng) && label === "現在地周辺";
+  return { lat, lng, label, hasGeo };
+}
+
+// LocalStorageからキャッシュしたリスクデータを取得
+function readCachedRisk() {
+  try { return JSON.parse(localStorage.getItem("cachedRiskData") || "null"); }
+  catch { return null; }
+}
+
+const INITIAL_COUNT = 5;
+
+// 震度文字列に応じた表示スタイル
+function getIntensityStyle(intensity) {
+  if (intensity.includes("震度7"))  return { color: "#e07b39", bg: "#fef0e3" };
+  if (intensity.includes("6強"))    return { color: "#e07b39", bg: "#fef0e3" };
+  if (intensity.includes("6弱"))    return { color: "#f39c12", bg: "#fef9e3" };
+  if (intensity.includes("5"))      return { color: "#1a6fa8", bg: "#e8f4fd" };
+  return { color: "#27ae60", bg: "#eafaf1" };
+}
+
 export default function RiskMap() {
-  const [selectedZone, setSelectedZone] = useState(null);
+  const [showAll, setShowAll] = useState(false);
 
-  const getIntensityColor = (intensity) => {
-    const val = intensity.toString();
-    if (val === "7") return "#c0392b";
-    if (val.startsWith("6")) return "#e67e22";
-    if (val.startsWith("5")) return "#f39c12";
-    if (val === "4") return "#3498db";
-    return "#27ae60";
-  };
+  const { lat, lng, label, hasGeo } = readGeoInfo();
+  const cachedRisk = readCachedRisk();
 
-  const getIntensityBg = (intensity) => {
-    const val = intensity.toString();
-    if (val === "7") return "#fdecea";
-    if (val.startsWith("6")) return "#fef0e3";
-    if (val.startsWith("5")) return "#fef9e3";
-    if (val === "4") return "#ebf5fb";
-    return "#eafaf1";
-  };
+  const mapCenter = hasGeo ? [lat, lng] : [36.0, 137.5];
+  const mapZoom   = hasGeo ? 13 : 5;
+
+  const displayed = showAll
+    ? majorEarthquakes
+    : majorEarthquakes.slice(0, INITIAL_COUNT);
 
   return (
     <div className="page">
@@ -30,149 +50,151 @@ export default function RiskMap() {
       <div className="page-hero">
         <h2 className="page-hero-title">🗺️ 地域リスクマップ</h2>
         <p className="page-hero-desc">
-          デモ用の揺れやすさ分布と近年の地震記録を確認できます。
+          現在地周辺の地図と、近年の主な地震記録を確認できます。
         </p>
       </div>
 
-      {/* 地図エリア */}
+      {/* ===== 地図エリア ===== */}
       <section className="card map-card">
         <div className="card-header">
           <span className="card-icon">🗾</span>
-          <h2 className="card-title">揺れやすさ分布（デモ）</h2>
+          <h2 className="card-title">現在地マップ</h2>
         </div>
 
-        <div className="map-container">
-          {/* 背景グリッド */}
-          <div className="map-bg">
-            {/* グリッド線 */}
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={`h${i}`}
-                className="map-grid-h"
-                style={{ top: `${(i + 1) * (100 / 7)}%` }}
-              />
-            ))}
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={`v${i}`}
-                className="map-grid-v"
-                style={{ left: `${(i + 1) * (100 / 7)}%` }}
-              />
-            ))}
-
-            {/* ゾーン */}
-            {mapZones.map((zone) => (
-              <button
-                key={zone.id}
-                className={`map-zone ${selectedZone === zone.id ? "map-zone--selected" : ""}`}
-                style={{
-                  left: `${zone.x}%`,
-                  top: `${zone.y}%`,
-                  backgroundColor: zone.color + "55",
-                  borderColor: zone.color,
-                }}
-                onClick={() =>
-                  setSelectedZone(selectedZone === zone.id ? null : zone.id)
-                }
-              >
-                <span className="map-zone-label">{zone.label}</span>
-              </button>
-            ))}
-
-            {/* 現在地マーカー */}
-            <div className="map-current-location">
-              <div className="map-marker-pulse" />
-              <div className="map-marker-dot" />
-              <span className="map-marker-label">現在地（デモ）</span>
-            </div>
-          </div>
-
-          {/* 選択ゾーン情報 */}
-          {selectedZone && (
-            <div className="map-zone-info">
-              {(() => {
-                const zone = mapZones.find((z) => z.id === selectedZone);
-                const riskLabels = { high: "揺れやすい", medium: "中程度", low: "比較的安定" };
-                return (
-                  <>
-                    <strong>{zone.label}</strong>：{riskLabels[zone.risk]}
-                  </>
-                );
-              })()}
-            </div>
+        <MapContainer
+          center={mapCenter}
+          zoom={mapZoom}
+          className="leaflet-map"
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {hasGeo && (
+            <CircleMarker
+              center={[lat, lng]}
+              radius={14}
+              pathOptions={{
+                color: "#1a6fa8",
+                fillColor: "#3498db",
+                fillOpacity: 0.75,
+                weight: 2,
+              }}
+            >
+              <Popup>
+                <div className="map-popup">
+                  <strong>{label ?? "現在地周辺"}</strong>
+                  {cachedRisk?.risk30year != null && (
+                    <div>震度6弱以上（30年）：{cachedRisk.risk30year}%</div>
+                  )}
+                  <div>
+                    データ種別：
+                    {cachedRisk?.source === "jshis"
+                      ? "J-SHIS公的データ"
+                      : "デモ用サンプル"}
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
           )}
-        </div>
+        </MapContainer>
 
-        {/* 凡例 */}
-        <div className="map-legend">
-          <span className="legend-title">揺れやすさ</span>
-          <div className="legend-items">
-            <div className="legend-item">
-              <div className="legend-dot" style={{ backgroundColor: "#e67e22" }} />
-              <span>揺れやすい</span>
+        {/* 地図下の情報サマリー */}
+        {hasGeo ? (
+          <div className="map-info-card">
+            <div className="map-info-row">
+              <span className="map-info-label">地域</span>
+              <span className="map-info-value">{label}</span>
             </div>
-            <div className="legend-item">
-              <div className="legend-dot" style={{ backgroundColor: "#f39c12" }} />
-              <span>中程度</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-dot" style={{ backgroundColor: "#27ae60" }} />
-              <span>比較的安定</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-dot map-marker-legend" />
-              <span>現在地</span>
+            {cachedRisk?.risk30year != null && (
+              <div className="map-info-row">
+                <span className="map-info-label">震度6弱以上（30年）</span>
+                <span className="map-info-value">{cachedRisk.risk30year}%</span>
+              </div>
+            )}
+            <div className="map-info-row">
+              <span className="map-info-label">データ種別</span>
+              <span className="map-info-value">
+                {cachedRisk?.source === "jshis" ? (
+                  <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+                ) : (
+                  <span className="datasource-badge datasource-badge--demo">デモ用サンプル</span>
+                )}
+              </span>
             </div>
           </div>
-        </div>
-
-        <p className="map-note">
-          このマップはデモ表示です。正式版では公的データをもとに地域リスクを表示予定です。実際の地盤データは
-          <a href="https://www.j-shis.bosai.go.jp/" target="_blank" rel="noopener noreferrer" className="source-link">
-            J-SHIS
-          </a>
-          でご確認ください。
-        </p>
+        ) : (
+          <p className="map-no-geo-note">
+            ホーム画面で「現在地から調べる」を実行すると、現在地を地図で確認できます。
+          </p>
+        )}
       </section>
 
-      {/* 近年の地震記録 */}
+      {/* ===== 近年の主な地震記録 ===== */}
       <section className="card">
         <div className="card-header">
           <span className="card-icon">📋</span>
           <h2 className="card-title">近年の主な地震記録</h2>
         </div>
-        <p className="earthquake-list-note">
-          ⚠ サンプルデータです。過去の地震を参考として掲載しています。今後の地震予測ではありません。
+
+        <p className="earthquake-disclaimer">
+          ⚠ この一覧は主な過去地震の記録です。リアルタイムの地震情報ではありません。最新の地震情報は
+          <a
+            href="https://www.jma.go.jp/jma/index.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="source-link"
+          >
+            気象庁
+          </a>
+          等の公式情報をご確認ください。
         </p>
+
         <div className="earthquake-list">
-          {recentEarthquakes.map((eq) => (
-            <div key={eq.id} className="earthquake-item">
-              <div className="earthquake-date">{eq.date}</div>
-              <div className="earthquake-main">
-                <div className="earthquake-epicenter">📍 {eq.epicenter}</div>
-                <div className="earthquake-stats">
-                  <span className="earthquake-mag">M {eq.magnitude}</span>
-                  <span
-                    className="earthquake-intensity"
-                    style={{
-                      color: getIntensityColor(eq.maxIntensity),
-                      backgroundColor: getIntensityBg(eq.maxIntensity),
-                    }}
-                  >
-                    最大震度 {eq.maxIntensity}
-                  </span>
-                  <span className="earthquake-depth">深さ {eq.depth}km</span>
+          {displayed.map((eq, i) => {
+            const style = getIntensityStyle(eq.maxIntensity);
+            return (
+              <div key={i} className="earthquake-item">
+                <div className="earthquake-date">{eq.date}</div>
+                <div className="earthquake-main">
+                  <div className="earthquake-name">{eq.name}</div>
+                  <div className="earthquake-area">📍 {eq.area}</div>
+                  <div className="earthquake-stats">
+                    <span className="earthquake-mag">{eq.magnitude}</span>
+                    <span
+                      className="earthquake-intensity"
+                      style={{ color: style.color, backgroundColor: style.bg }}
+                    >
+                      {eq.maxIntensity}
+                    </span>
+                  </div>
+                  {eq.note && (
+                    <div className="earthquake-note">{eq.note}</div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {majorEarthquakes.length > INITIAL_COUNT && (
+          <button
+            className="btn btn-outline earthquake-more-btn"
+            onClick={() => setShowAll((v) => !v)}
+          >
+            {showAll
+              ? "▲ 閉じる"
+              : `▼ もっと見る（残り${majorEarthquakes.length - INITIAL_COUNT}件）`}
+          </button>
+        )}
+
         <p className="earthquake-source">
-          参考：正式版では気象庁等の公的データ連携を予定（現在はサンプルデータ）
+          参考：気象庁・防災科学技術研究所等の公的情報をもとに編集
         </p>
       </section>
 
-      {/* 外部リンク */}
+      {/* ===== 公式リンク ===== */}
       <section className="card link-card">
         <div className="card-header">
           <span className="card-icon">🔗</span>
