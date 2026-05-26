@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { regionRiskData } from "../data/earthquakeData";
+import { checklistItems, categories } from "../data/checklistItems";
 import DisclaimerBanner from "../components/DisclaimerBanner";
 import { fetchJshisRisk, fetchJshisSurfaceGround } from "../lib/jshis";
 
@@ -215,6 +216,22 @@ export default function Home() {
 
   const totalItems = 17;
   const prepPercent = Math.round((checklistCount / totalItems) * 100);
+
+  const categoryProgress = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("prepChecklist") || "{}");
+      return categories.map((cat) => {
+        const items = checklistItems.filter((item) => item.category === cat);
+        const done = items.filter((item) => saved[item.id]).length;
+        return { cat, done, total: items.length };
+      });
+    } catch {
+      return categories.map((cat) => {
+        const items = checklistItems.filter((item) => item.category === cat);
+        return { cat, done: 0, total: items.length };
+      });
+    }
+  })();
 
   const updateMemo = (key, value) => {
     setFamilyMemo((prev) => {
@@ -434,6 +451,125 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 長期地震リスク */}
+      <section className="card risk-card">
+        <div className="card-header">
+          <span className="card-icon">📊</span>
+          <h2 className="card-title">長期地震リスク</h2>
+        </div>
+        <p className="risk-subtitle">
+          {isJshis
+            ? "今後30年以内に震度6弱以上の揺れに見舞われる確率"
+            : "地域の長期地震リスク指標（30年スケール参考値）"}
+        </p>
+        {!isJshis && !riskLoading && inputMode !== "initial" && (
+          <p className="risk-demo-note">⚠ 現在はデモ用サンプル値です</p>
+        )}
+        <div className="risk-datasource">
+          データ種別：
+          {riskLoading ? (
+            <span className="datasource-badge">取得中…</span>
+          ) : isJshis ? (
+            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+          ) : (
+            <span className="datasource-badge datasource-badge--demo">デモ用サンプル</span>
+          )}
+        </div>
+        {inputMode === "geo" && riskData?.source === "demo" && !riskLoading && (
+          <>
+            <p className="risk-api-fail-note">
+              J-SHISデータの取得に失敗したため、サンプル値を表示しています。
+            </p>
+            {riskData?.failReason && (
+              <div className="risk-api-fail-debug">
+                <p className="risk-api-fail-reason">取得失敗理由：{riskData.failReason}</p>
+                {riskData?.failDebug?.requestUrl && (
+                  <p className="risk-api-fail-reason">リクエストURL：{riskData.failDebug.requestUrl}</p>
+                )}
+                {riskData?.failDebug?.responseText && (
+                  <p className="risk-api-fail-reason">J-SHISエラー本文：{riskData.failDebug.responseText}</p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+        {inputMode === "text" && !riskLoading && (
+          <p className="risk-text-input-note">
+            市区町村名入力時は参考サンプル値を表示しています。現在地取得時はJ-SHIS公的データを使用します。
+          </p>
+        )}
+        <div className="risk-display">
+          <div
+            className="risk-circle"
+            style={{ borderColor: riskColor, color: riskColor }}
+          >
+            <span className="risk-percent">{displayRisk30}</span>
+            <span className="risk-unit">%</span>
+          </div>
+          <div className="risk-info">
+            <div className="risk-level" style={{ color: riskColor }}>
+              リスク：{getRiskLabel(displayRisk30)}
+            </div>
+            <div className="risk-region">{regionLabel}</div>
+          </div>
+        </div>
+        <div className="risk-bar-wrap">
+          <div
+            className="risk-bar"
+            style={{
+              width: `${Math.min(displayRisk30, 100)}%`,
+              backgroundColor: riskColor,
+            }}
+          />
+        </div>
+        <p className="risk-source">
+          {isJshis ? (
+            <>
+              出典：
+              <a
+                href="https://www.j-shis.bosai.go.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="source-link"
+              >
+                J-SHIS 地震ハザードステーション（防災科学技術研究所）
+              </a>
+            </>
+          ) : (
+            <>
+              参考：
+              <a
+                href="https://www.j-shis.bosai.go.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="source-link"
+              >
+                J-SHIS 地震ハザードステーション
+              </a>
+              等の公的情報（現在はサンプル値）
+            </>
+          )}
+        </p>
+        {isJshis && riskData.intensities && (
+          <div className="risk-intensities">
+            <p className="risk-intensities-title">長期地震リスク詳細（J-SHIS公的データ）</p>
+            <div className="risk-intensities-grid">
+              {[
+                { label: "震度6弱以上（30年）", val: riskData.intensities.i55 },
+              ].filter(({ val }) => val != null).map(({ label, val }) => (
+                <div key={label} className="risk-intensity-item">
+                  <span className="risk-intensity-label">{label}</span>
+                  <span className="risk-intensity-value">{val}%</span>
+                </div>
+              ))}
+            </div>
+            {riskData.meshCode && (
+              <p className="risk-mesh-note">メッシュコード：{riskData.meshCode}</p>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* あなたへの備え提案 */}
       <section className="card proposal-card">
         <div className="card-header">
@@ -486,6 +622,19 @@ export default function Home() {
           <p className="prep-progress-desc">
             {checklistCount} / {totalItems} 項目チェック済み
           </p>
+        </div>
+        <div className="prep-category-progress">
+          {categoryProgress.map(({ cat, done, total }) => (
+            <div key={cat} className="prep-cat-item">
+              <span className="prep-cat-name">{cat}</span>
+              <span
+                className="prep-cat-count"
+                style={{ color: done === total ? "#27ae60" : done > 0 ? "#f39c12" : undefined }}
+              >
+                {done}/{total}
+              </span>
+            </div>
+          ))}
         </div>
         <Link to="/prep-check" className="btn btn-primary">
           備えチェックリストを確認する →
