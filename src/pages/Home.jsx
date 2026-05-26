@@ -64,6 +64,11 @@ export default function Home() {
   const [inputText, setInputText] = useState("");
   const [riskData, setRiskData] = useState(null);  // null = demo, {source:"jshis",...} = 公的データ
   const [riskLoading, setRiskLoading] = useState(false);
+  const [geoCoords, setGeoCoords] = useState(() => {
+    const lat = parseFloat(localStorage.getItem("regionLat"));
+    const lng = parseFloat(localStorage.getItem("regionLng"));
+    return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : null;
+  });
 
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
 
@@ -98,9 +103,9 @@ export default function Home() {
     setGeoState("loading");
     navigator.geolocation.getCurrentPosition(
       ({ coords: { latitude, longitude } }) => {
-        const key = findClosestRegion(latitude, longitude);
-        setRegionKey(key);
-        setRegionLabel(regionRiskData[key].name + "（現在地周辺）");
+        setRegionKey("other");
+        setRegionLabel("現在地周辺");
+        setGeoCoords({ lat: latitude, lng: longitude });
         setGeoState("idle");
         localStorage.setItem("regionLat", latitude.toString());
         localStorage.setItem("regionLng", longitude.toString());
@@ -116,6 +121,7 @@ export default function Home() {
   const handleSearch = () => {
     const text = inputText.trim();
     if (!text) return;
+    setGeoCoords(null);
     const key = matchRegionByKeyword(text);
     setRegionKey(key);
     setRegionLabel(text);
@@ -184,6 +190,12 @@ export default function Home() {
           <span className="region-current-label">選択地域：</span>
           <strong className="region-current-name">{regionLabel}</strong>
         </div>
+
+        {geoCoords !== null && regionLabel === "現在地周辺" && (
+          <p className="geo-coords-note">
+            取得位置：緯度 {geoCoords.lat.toFixed(3)} / 経度 {geoCoords.lng.toFixed(3)}
+          </p>
+        )}
 
         {geoState === "idle" && !showInput && (
           <div className="region-actions">

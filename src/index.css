@@ -260,6 +260,13 @@ button {
   margin-top: 0.6rem;
 }
 
+.geo-coords-note {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .region-current {
   display: flex;
   align-items: center;
