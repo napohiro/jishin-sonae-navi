@@ -294,7 +294,15 @@ export default function Home() {
               J-SHISデータの取得に失敗したため、サンプル値を表示しています。
             </p>
             {riskData?.failReason && (
-              <p className="risk-api-fail-reason">取得失敗理由：{riskData.failReason}</p>
+              <div className="risk-api-fail-debug">
+                <p className="risk-api-fail-reason">取得失敗理由：{riskData.failReason}</p>
+                {riskData?.failDebug?.requestUrl && (
+                  <p className="risk-api-fail-reason">リクエストURL：{riskData.failDebug.requestUrl}</p>
+                )}
+                {riskData?.failDebug?.responseText && (
+                  <p className="risk-api-fail-reason">J-SHISエラー本文：{riskData.failDebug.responseText}</p>
+                )}
+              </div>
             )}
           </>
         )}
@@ -361,9 +369,7 @@ export default function Home() {
             <p className="risk-intensities-title">長期地震リスク詳細（J-SHIS公的データ）</p>
             <div className="risk-intensities-grid">
               {[
-                { label: "震度5弱以上", val: riskData.intensities.i45 },
-                { label: "震度5強以上", val: riskData.intensities.i50 },
-                { label: "震度6弱以上", val: riskData.intensities.i55 },
+                { label: "震度6弱以上（30年）", val: riskData.intensities.i55 },
               ].filter(({ val }) => val != null).map(({ label, val }) => (
                 <div key={label} className="risk-intensity-item">
                   <span className="risk-intensity-label">{label}</span>

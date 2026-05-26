@@ -10,17 +10,10 @@ const toPercent = (v) => (v != null ? parseFloat((v * 100).toFixed(1)) : null);
 
 /**
  * 緯度・経度からJ-SHIS長期地震リスクを取得する。
- * 失敗時は { source: "demo", failReason: string } を返す。
+ * 失敗時は { source: "demo", failReason, failDebug } を返す。
  *
  * @param {number} lat 緯度（WGS84）
  * @param {number} lng 経度（WGS84）
- * @returns {Promise<{
- *   source: "jshis" | "demo",
- *   failReason?: string,
- *   risk30year?: number,
- *   intensities?: { i45: number|null, i50: number|null, i55: number|null, i60: number|null },
- *   meshCode?: string|null
- * }>}
  */
 export async function fetchJshisRisk(lat, lng) {
   const ctrl = new AbortController();
@@ -30,32 +23,32 @@ export async function fetchJshisRisk(lat, lng) {
     console.log("[jshis client] Calling proxy:", url);
 
     const res = await fetch(url, { signal: ctrl.signal });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body?.message ?? `HTTP ${res.status}`);
-    }
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
-    if (data?.status !== "success") {
-      throw new Error(data?.message ?? `proxy status: ${data?.status}`);
+    if (!res.ok || data?.status !== "success") {
+      const failReason = data?.reason ?? data?.message ?? `HTTP ${res.status}`;
+      const failDebug = data?.debug ?? null;
+      console.warn("[jshis client] Failed:", failReason, failDebug);
+      return { source: "demo", failReason, failDebug };
     }
 
     const d = data.data;
-    if (!d || d.t30_i55 == null) throw new Error("t30_i55 missing");
+    if (!d || d.t30_i55 == null) {
+      console.warn("[jshis client] t30_i55 missing in response");
+      return { source: "demo", failReason: "t30_i55 missing" };
+    }
 
     return {
       source: "jshis",
-      risk30year: Math.round(d.t30_i55 * 100), // メイン表示用（整数%）
+      risk30year: Math.round(d.t30_i55 * 100),
       intensities: {
-        i45: toPercent(d.t30_i45),
-        i50: toPercent(d.t30_i50),
         i55: toPercent(d.t30_i55),
       },
       meshCode: data.meshCode ?? null,
     };
   } catch (err) {
     const failReason = err?.name === "AbortError" ? "timeout" : (err?.message ?? String(err));
-    console.warn("[jshis client] Failed:", failReason);
+    console.warn("[jshis client] Exception:", failReason);
     return { source: "demo", failReason };
   } finally {
     clearTimeout(timer);
