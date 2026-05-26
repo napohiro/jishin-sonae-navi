@@ -2,7 +2,26 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { regionRiskData } from "../data/earthquakeData";
 import DisclaimerBanner from "../components/DisclaimerBanner";
-import { fetchJshisRisk } from "../lib/jshis";
+import { fetchJshisRisk, fetchJshisSurfaceGround } from "../lib/jshis";
+
+// 揺れやすさ5段階定義（ARVベースのレベル1〜5）
+const GROUND_LEVELS = [
+  { level: 1, label: "揺れにくい",     color: "#27ae60", icon: "🟢",
+    shortDesc: "地盤による揺れの増幅が比較的小さい",
+    desc: "地盤による揺れの増幅が比較的小さい地域です。基本的な備えは引き続き大切です。" },
+  { level: 2, label: "やや揺れにくい", color: "#5aab61", icon: "🟡",
+    shortDesc: "平均より少し揺れにくい",
+    desc: "平均より少し揺れにくい地域です。家具固定や避難場所の確認など基本的な備えをお勧めします。" },
+  { level: 3, label: "中程度",         color: "#f39c12", icon: "🟡",
+    shortDesc: "標準的な揺れやすさ",
+    desc: "標準的な揺れやすさです。安全を意味するわけではないため、家具固定や避難場所の確認など基本的な備えが大切です。" },
+  { level: 4, label: "やや揺れやすい", color: "#e07b39", icon: "🟠",
+    shortDesc: "揺れがやや大きくなりやすい",
+    desc: "揺れがやや大きくなりやすい地域です。家具固定や建物の耐震性の確認をしっかり行いましょう。" },
+  { level: 5, label: "揺れやすい",     color: "#e67e22", icon: "🔴",
+    shortDesc: "地盤による揺れの増幅が大きくなりやすい",
+    desc: "地盤による揺れの増幅が大きくなりやすい地域です。家具固定や建物の耐震性の確認など、備えをしっかり確認しておきましょう。" },
+];
 
 const regionKeywords = {
   tokyo:     ["東京", "23区", "千代田", "新宿", "渋谷", "港区", "品川", "世田谷", "練馬", "豊島", "杉並"],
@@ -70,6 +89,7 @@ export default function Home() {
     return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : null;
   });
   const [showGroundScale, setShowGroundScale] = useState(false);
+  const [groundData, setGroundData] = useState(null);
   // "initial" | "geo" | "text"
   const [inputMode, setInputMode] = useState(() => {
     const label = localStorage.getItem("regionLabel");
@@ -94,6 +114,7 @@ export default function Home() {
     if (isNaN(lat) || isNaN(lng)) return;
     setRiskLoading(true);
     fetchJshisRisk(lat, lng).then((d) => { setRiskData(d); setRiskLoading(false); });
+    fetchJshisSurfaceGround(lat, lng).then((d) => setGroundData(d));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGeoRequest = () => {
@@ -114,7 +135,9 @@ export default function Home() {
         localStorage.setItem("regionLng", longitude.toString());
         setRiskLoading(true);
         setRiskData(null);
+        setGroundData(null);
         fetchJshisRisk(latitude, longitude).then((d) => { setRiskData(d); setRiskLoading(false); });
+        fetchJshisSurfaceGround(latitude, longitude).then((d) => setGroundData(d));
       },
       () => setGeoState("error"),
       { timeout: 10000 }
@@ -147,22 +170,19 @@ export default function Home() {
     return "比較的低い";
   };
 
-  const getGroundLabel = (index) => {
-    if (index === 1) return {
-      label: "比較的揺れにくい", color: "#27ae60", icon: "🟢",
-      desc: "地盤による揺れの増幅が比較的小さい地域です。引き続き、家具固定や避難場所の確認などの基本的な備えをお勧めします。",
-    };
-    if (index === 2) return {
-      label: "中程度", color: "#f39c12", icon: "🟡",
-      desc: "標準的な揺れやすさです。特別に揺れにくいわけでも揺れやすいわけでもありませんが、安全を意味するわけではありません。家具固定や避難場所の確認など基本的な備えが大切です。",
-    };
-    return {
-      label: "揺れやすい", color: "#e67e22", icon: "🟠",
-      desc: "地盤による揺れの増幅が大きくなりやすい地域です。家具の固定や建物の耐震性の確認など、備えをしっかり確認しておきましょう。",
-    };
+  // デモ用: groundIndex(1/2/3+) → GROUND_LEVELS エントリを返す
+  const getGroundByIndex = (index) => {
+    const level = index === 1 ? 1 : index === 2 ? 3 : 5;
+    return GROUND_LEVELS.find((g) => g.level === level) ?? GROUND_LEVELS[2];
   };
 
-  const ground = getGroundLabel(region.groundIndex);
+  const isJshisGround = groundData?.source === "jshis";
+  const currentGroundLevel = isJshisGround
+    ? groundData.groundLevel
+    : (region.groundIndex === 1 ? 1 : region.groundIndex === 2 ? 3 : 5);
+  const ground = isJshisGround
+    ? (GROUND_LEVELS.find((g) => g.level === groundData.groundLevel) ?? GROUND_LEVELS[2])
+    : getGroundByIndex(region.groundIndex);
   const isJshis = riskData?.source === "jshis";
   const displayRisk30 = isJshis ? riskData.risk30year : region.risk30year;
   const riskColor = getRiskColor(displayRisk30);
@@ -400,15 +420,32 @@ export default function Home() {
           <span className="card-icon">🌍</span>
           <h2 className="card-title">揺れやすさ</h2>
         </div>
+        <div className="ground-datasource">
+          データ種別：
+          {isJshisGround ? (
+            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+          ) : (
+            <span className="datasource-badge datasource-badge--demo">デモ用参考値</span>
+          )}
+        </div>
         <div className="ground-display">
           <span className="ground-icon-large">{ground.icon}</span>
           <div>
             <div className="ground-label" style={{ color: ground.color }}>
               {ground.label}
             </div>
-            <div className="ground-type">{region.groundType}</div>
+            {isJshisGround && groundData?.jname ? (
+              <div className="ground-type">微地形区分：{groundData.jname}</div>
+            ) : (
+              <div className="ground-type">{region.groundType}</div>
+            )}
           </div>
         </div>
+        {isJshisGround && groundData?.arv != null && (
+          <p className="ground-arv-note">
+            最大速度増幅率（ARV）：{groundData.arv.toFixed(2)}（J-SHIS 表層地盤情報）
+          </p>
+        )}
         <p className="ground-level-desc">{ground.desc}</p>
         <p className="ground-desc">
           「揺れやすさ」は、同じ地震の揺れが来たときに、地盤によってどれくらい揺れが大きくなりやすいかの目安です。地盤が柔らかい地域ほど、揺れが増幅されやすくなります。
@@ -422,17 +459,14 @@ export default function Home() {
         </button>
         {showGroundScale && (
           <div className="ground-scale">
-            {[
-              { icon: "🟢", label: "揺れにくい",     desc: "地盤による揺れの増幅が比較的小さい" },
-              { icon: "🟡", label: "やや揺れにくい", desc: "平均より少し揺れにくい" },
-              { icon: "🟡", label: "中程度",          desc: "標準的な揺れやすさ" },
-              { icon: "🟠", label: "やや揺れやすい", desc: "揺れがやや大きくなりやすい" },
-              { icon: "🔴", label: "揺れやすい",      desc: "地盤による揺れの増幅が大きくなりやすい" },
-            ].map(({ icon, label, desc }) => (
-              <div key={label} className="ground-scale-item">
+            {GROUND_LEVELS.map(({ level, icon, label, shortDesc }) => (
+              <div
+                key={level}
+                className={`ground-scale-item${currentGroundLevel === level ? " ground-scale-item--current" : ""}`}
+              >
                 <span className="ground-scale-icon">{icon}</span>
                 <span className="ground-scale-label">{label}</span>
-                <span className="ground-scale-desc">{desc}</span>
+                <span className="ground-scale-desc">{shortDesc}</span>
               </div>
             ))}
           </div>

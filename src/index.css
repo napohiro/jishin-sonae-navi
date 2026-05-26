@@ -579,6 +579,24 @@ button {
   margin-top: 0.2rem;
 }
 
+.ground-datasource {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.75rem;
+}
+
+.ground-arv-note {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.5rem;
+}
+
+.ground-scale-item--current .ground-scale-label {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .ground-level-desc {
   font-size: 0.85rem;
   color: var(--color-text);
