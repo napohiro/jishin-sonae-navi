@@ -13,7 +13,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="app">
-        <Header />
+        <Header onEmergency={() => setShowEmergency(true)} />
         <main className="main-content">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -21,17 +21,6 @@ export default function App() {
             <Route path="/prep-check" element={<PrepCheck />} />
           </Routes>
         </main>
-
-        {/* 緊急時モード 固定ボタン */}
-        <button
-          className="emergency-fab"
-          onClick={() => setShowEmergency(true)}
-          aria-label="緊急時の行動確認を開く"
-        >
-          🚨 今、揺れています
-        </button>
-
-        {/* 緊急時モード オーバーレイ */}
         {showEmergency && (
           <EmergencyMode onClose={() => setShowEmergency(false)} />
         )}

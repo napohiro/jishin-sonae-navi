@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 
-export default function Header() {
+export default function Header({ onEmergency }) {
   const location = useLocation();
 
   const navItems = [
@@ -18,6 +18,13 @@ export default function Header() {
             <p className="header-subtitle">地域のリスク確認と備え</p>
           </div>
         </div>
+        <button
+          className="header-emergency-btn"
+          onClick={onEmergency}
+          aria-label="緊急時の行動確認を開く"
+        >
+          ⚠ 緊急時
+        </button>
       </div>
       <nav className="header-nav">
         {navItems.map((item) => (
