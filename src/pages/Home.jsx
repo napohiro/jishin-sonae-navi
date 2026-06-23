@@ -96,6 +96,9 @@ export default function Home() {
     catch { return {}; }
   });
   const [inputMode, setInputMode] = useState(() => {
+    const saved = localStorage.getItem("regionMode");
+    if (saved === "geo" || saved === "text") return saved;
+    // 旧バージョン互換: regionMode キーが未保存の場合は regionLabel で判定
     const label = localStorage.getItem("regionLabel");
     if (label === "現在地周辺") return "geo";
     if (label && label !== regionRiskData.tokyo.name) return "text";
@@ -113,7 +116,7 @@ export default function Home() {
   const memoTimerRef = useRef(null);
 
   const region = regionRiskData[regionKey] ?? regionRiskData.other;
-  const hasGeo = geoCoords !== null && regionLabel === "現在地周辺";
+  const hasGeo = geoCoords !== null && inputMode === "geo";
 
   const fetchShelters = async (lat, lng) => {
     setShelterLoading(true);
@@ -125,6 +128,21 @@ export default function Home() {
       setShelterData({ status: "error", items: [] });
     } finally {
       setShelterLoading(false);
+    }
+  };
+
+  const fetchRegionName = async (lat, lng) => {
+    try {
+      const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lng}`);
+      const data = await res.json().catch(() => ({}));
+      if (data?.status === "success" && data?.label) {
+        const name = `${data.label}周辺`;
+        setRegionLabel(name);
+        localStorage.setItem("regionLabel", name);
+      }
+      // 失敗時は「現在地周辺」のまま表示
+    } catch {
+      // 「現在地周辺」のままにする
     }
   };
 
@@ -143,8 +161,7 @@ export default function Home() {
   }, [regionKey, regionLabel]);
 
   useEffect(() => {
-    const label = localStorage.getItem("regionLabel");
-    if (label !== "現在地周辺") return;
+    if (inputMode !== "geo") return;
     const lat = parseFloat(localStorage.getItem("regionLat"));
     const lng = parseFloat(localStorage.getItem("regionLng"));
     if (isNaN(lat) || isNaN(lng)) return;
@@ -170,9 +187,12 @@ export default function Home() {
         setGeoState("idle");
         localStorage.setItem("regionLat", latitude.toString());
         localStorage.setItem("regionLng", longitude.toString());
+        localStorage.setItem("regionMode", "geo");
         setRiskLoading(true);
         setRiskData(null);
         setGroundData(null);
+        // 地域名を逆ジオコーディングで取得（非同期・失敗時は現在地周辺のまま）
+        fetchRegionName(latitude, longitude);
         fetchJshisRisk(latitude, longitude).then((d) => { setRiskData(d); setRiskLoading(false); });
         fetchJshisSurfaceGround(latitude, longitude).then((d) => setGroundData(d));
         fetchShelters(latitude, longitude);
@@ -193,6 +213,7 @@ export default function Home() {
     setRegionLabel(text);
     setShowInput(false);
     setInputText("");
+    localStorage.setItem("regionMode", "text");
   };
 
   const getRiskColor = (risk) => {
@@ -324,7 +345,7 @@ export default function Home() {
           <strong className="region-current-name">{regionLabel}</strong>
         </div>
 
-        {geoCoords !== null && regionLabel === "現在地周辺" && (
+        {geoCoords !== null && inputMode === "geo" && (
           <p className="geo-coords-note">
             取得位置：緯度 {geoCoords.lat.toFixed(3)} / 経度 {geoCoords.lng.toFixed(3)}
           </p>
@@ -344,7 +365,7 @@ export default function Home() {
         {geoState === "confirm" && (
           <div className="geo-consent">
             <p className="geo-consent-text">
-              現在地情報は端末内で地域リスク表示にのみ使用します。個人を特定する目的では使用しません。
+              現在地から地域名を表示するために位置情報を利用します。地域名変換のため、位置情報はOpenStreetMap（Nominatim）へ送信されます。取得した情報は端末内での地域リスク表示にのみ使用し、個人を特定する目的では使用しません。
             </p>
             <div className="region-actions">
               <button className="btn btn-primary" onClick={handleGeoConfirm}>
@@ -495,7 +516,7 @@ export default function Home() {
           {riskLoading ? (
             <span className="datasource-badge">取得中…</span>
           ) : isJshis ? (
-            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS</span>
           ) : (
             <span className="datasource-badge datasource-badge--demo">デモ用サンプル</span>
           )}
@@ -676,11 +697,14 @@ export default function Home() {
         <div className="ground-datasource">
           データ種別：
           {isJshisGround ? (
-            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS公的データ</span>
+            <span className="datasource-badge datasource-badge--jshis">✓ J-SHIS表層地盤データ</span>
           ) : (
             <span className="datasource-badge datasource-badge--demo">デモ用参考値</span>
           )}
         </div>
+        {!isJshisGround && (
+          <p className="risk-demo-note">⚠ 揺れやすさはデモ用参考値です</p>
+        )}
         <div className="ground-display">
           <span className="ground-icon-large">{ground.icon}</span>
           <div>
@@ -688,7 +712,7 @@ export default function Home() {
               {ground.label}
             </div>
             {isJshisGround && groundData?.jname ? (
-              <div className="ground-type">微地形区分：{groundData.jname}</div>
+              <div className="ground-type">微地形：{groundData.jname}</div>
             ) : (
               <div className="ground-type">{region.groundType}</div>
             )}
@@ -696,7 +720,7 @@ export default function Home() {
         </div>
         {isJshisGround && groundData?.arv != null && (
           <p className="ground-arv-note">
-            最大速度増幅率（ARV）：{groundData.arv.toFixed(2)}（J-SHIS 表層地盤情報）
+            地盤増幅率：ARV {groundData.arv.toFixed(2)}
           </p>
         )}
         <p className="ground-level-desc">{ground.desc}</p>

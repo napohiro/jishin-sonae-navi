@@ -13,7 +13,6 @@ export default function Header() {
     <header className="header">
       <div className="header-top">
         <div className="header-brand">
-          <span className="header-shield">🛡️</span>
           <div>
             <h1 className="header-title">地震そなえナビ</h1>
             <p className="header-subtitle">地域のリスク確認と備え</p>

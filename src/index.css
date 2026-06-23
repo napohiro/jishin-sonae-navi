@@ -532,6 +532,7 @@ button {
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 0.25rem;
+  white-space: nowrap;
 }
 
 .risk-region {
