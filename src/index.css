@@ -1841,6 +1841,278 @@ button {
   margin-top: 0.5rem;
 }
 
+/* ===== EMERGENCY MODE ===== */
+
+/* 固定ボタン（FAB） */
+.emergency-fab {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: linear-gradient(135deg, #b03020, #d94032);
+  color: #fff;
+  border: none;
+  border-radius: 2rem;
+  padding: 0.7rem 1.625rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(180, 40, 30, 0.38);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  /* 画面幅に合わせて最大幅を制限 */
+  max-width: calc(min(640px, 100vw) - 2rem);
+}
+
+.emergency-fab:hover {
+  box-shadow: 0 6px 22px rgba(180, 40, 30, 0.5);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.emergency-fab:active {
+  transform: translateX(-50%) translateY(0);
+  box-shadow: 0 2px 10px rgba(180, 40, 30, 0.4);
+}
+
+/* FABの高さ分だけページ下部に余白を追加 */
+.page {
+  padding-bottom: 5rem;
+}
+
+/* オーバーレイ全体 */
+.emergency-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #fff8f7;
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: emergencyFadeIn 0.15s ease-out;
+}
+
+@keyframes emergencyFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ヘッダー */
+.emergency-header {
+  background: linear-gradient(135deg, #b03020 0%, #d94032 100%);
+  padding: 0.875rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.75rem;
+}
+
+.emergency-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.emergency-header-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.emergency-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.emergency-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 0.1rem;
+  line-height: 1.2;
+}
+
+.emergency-close-x {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+}
+
+.emergency-close-x:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* 場所タブ */
+.emergency-tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 2px solid #fce8e8;
+  flex-shrink: 0;
+}
+
+.emergency-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.5rem 0.2rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: #999;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  font-family: var(--font-sans);
+}
+
+.emergency-tab:hover {
+  color: #b03020;
+  background: #fff5f5;
+}
+
+.emergency-tab--active {
+  color: #b03020;
+  border-bottom-color: #d94032;
+  background: #fff8f7;
+}
+
+.emergency-tab-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.emergency-tab-label {
+  line-height: 1;
+}
+
+/* 行動リスト */
+.emergency-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0.875rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.emergency-action-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.emergency-action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  background: #fff;
+  border: 1px solid #fce8e8;
+  border-left: 4px solid #d94032;
+  border-radius: 10px;
+  padding: 0.7rem 0.875rem;
+}
+
+.emergency-action-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7rem;
+  height: 1.7rem;
+  background: #d94032;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.82rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.emergency-action-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.emergency-action-texts {
+  flex: 1;
+  min-width: 0;
+}
+
+.emergency-action-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2c2c2c;
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+.emergency-action-sub {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.45;
+}
+
+/* フッター */
+.emergency-footer {
+  background: #fff;
+  border-top: 1px solid #fce8e8;
+  padding: 0.7rem 1rem;
+  flex-shrink: 0;
+}
+
+.emergency-disclaimer {
+  font-size: 0.7rem;
+  color: #aaa;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 0.6rem;
+}
+
+.emergency-close-btn {
+  display: block;
+  width: 100%;
+  padding: 0.7rem;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: center;
+  transition: background 0.15s ease;
+}
+
+.emergency-close-btn:hover {
+  background: #eee;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (min-width: 640px) {
   .app {
